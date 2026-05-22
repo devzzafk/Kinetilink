@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JuneVerse // SonicLedger Live Perception</title>
+    <title>JuneVerse // SonicLedger Live Guidance</title>
     
     <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
 
     <style>
@@ -20,12 +21,7 @@
             --border-color: #242b35;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Space Grotesk', sans-serif;
             background-color: var(--bg-dark);
@@ -43,20 +39,9 @@
             align-items: center;
         }
 
-        header h1 {
-            font-size: 1.8rem;
-            letter-spacing: -0.05em;
-        }
-
-        header h1 span {
-            color: var(--accent-green);
-        }
-
-        .tagline {
-            font-family: 'Space Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
+        header h1 { font-size: 1.8rem; letter-spacing: -0.05em; }
+        header h1 span { color: var(--accent-green); }
+        .tagline { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--text-muted); }
 
         .dashboard-grid {
             display: grid;
@@ -66,11 +51,7 @@
             margin: 0 auto;
         }
 
-        @media (max-width: 968px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
         .panel {
             background-color: var(--bg-panel);
@@ -100,20 +81,13 @@
             border: 1px solid var(--border-color);
         }
 
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        video { width: 100%; height: 100%; object-fit: cover; }
 
         .lane-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            pointer-events: none;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; pointer-events: none;
+            z-index: 10;
         }
 
         .lane {
@@ -126,19 +100,15 @@
 
         .lane::after {
             content: attr(data-label);
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
+            position: absolute; bottom: 10px; left: 50%;
             transform: translateX(-50%);
-            font-family: 'Space Mono', monospace;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.3);
-            text-transform: uppercase;
+            font-family: 'Space Mono', monospace; font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3); text-transform: uppercase;
         }
 
         .lane.active-block {
-            background-color: rgba(239, 68, 68, 0.15);
-            border: 1px solid #ef4444;
+            background-color: rgba(239, 68, 68, 0.25);
+            border: 2px solid #ef4444;
         }
 
         .web3-metric-card {
@@ -150,60 +120,31 @@
             font-family: 'Space Mono', monospace;
         }
 
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .metric-value {
-            color: var(--accent-green);
-            word-break: break-all;
-            text-align: right;
-        }
+        .metric-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .metric-value { color: var(--accent-green); word-break: break-all; }
 
         .terminal-box {
             background-color: #080a0d;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 1rem;
-            font-family: 'Space Mono', monospace;
-            font-size: 0.85rem;
-            height: 250px;
-            overflow-y: auto;
-            color: #34d399;
-            flex-grow: 1;
+            font-family: 'Space Mono', monospace; font-size: 0.85rem;
+            height: 250px; overflow-y: auto;
+            color: #34d399; flex-grow: 1;
         }
 
-        .terminal-line {
-            margin-bottom: 0.4rem;
-        }
-
-        .terminal-timestamp {
-            color: var(--text-muted);
-            margin-right: 0.5rem;
-        }
+        .terminal-line { margin-bottom: 0.4rem; }
+        .terminal-timestamp { color: var(--text-muted); margin-right: 0.5rem; }
 
         .btn {
             background-color: var(--accent-green);
-            color: #000;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: 100%;
-            margin-top: 1rem;
+            color: #000; border: none; padding: 0.8rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+            border-radius: 6px; cursor: pointer;
+            transition: all 0.2s ease; width: 100%; margin-top: 1rem;
         }
 
-        .btn:disabled {
-            background-color: #1e2530;
-            color: var(--text-muted);
-            cursor: not-allowed;
-        }
+        .btn:disabled { background-color: #1e2530; color: var(--text-muted); cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -213,14 +154,14 @@
             <h1>JuneVerse // <span>SonicLedger</span></h1>
             <div class="tagline">RESEARCH • INNOVATE • TECHNOLOGY</div>
         </div>
-        <div class="tagline">LIVE AI PERCEPTION NODE</div>
+        <div class="tagline">LIVE WALKING ASSIST MATRIX</div>
     </header>
 
     <main class="dashboard-grid">
         <div class="panel">
             <div class="panel-title">
                 LIVE PERCEPTION ENVIRONMENT
-                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• ARCHITECTURE OFFLINE</span>
+                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• MODEL OFFLINE</span>
             </div>
             
             <div class="viewfinder-container">
@@ -232,7 +173,7 @@
                 </div>
             </div>
 
-            <button class="btn" id="btn-start">BOOT ENGINE & STREAM LIVE CAMERA</button>
+            <button class="btn" id="btn-start">BOOT ENGINE & ACTIVATE SYSTEM PERCEPTION</button>
         </div>
 
         <div class="panel">
@@ -240,7 +181,7 @@
             
             <div class="web3-metric-card">
                 <div class="metric-row">
-                    <span>Cryptographic Node Wallet:</span>
+                    <span>Cryptographic Wallet Address:</span>
                     <span class="metric-value" id="wallet-addr">Uninitialized</span>
                 </div>
                 <div class="metric-row">
@@ -248,25 +189,25 @@
                     <span class="metric-value" id="wallet-bal">0.00 JNV</span>
                 </div>
                 <div class="metric-row">
-                    <span>Active Distributed Block:</span>
+                    <span>Active Decentralized Block:</span>
                     <span class="metric-value" id="ledger-block">#749,210</span>
                 </div>
             </div>
 
-            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE TRACKING STRUCT LOG</div>
+            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ASSIST LOG EVENT TRACKER</div>
             <div class="terminal-box" id="terminal">
-                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Awaiting deployment sequence signature activation...</div>
+                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Awaiting initialization sequence activation...</div>
             </div>
         </div>
     </main>
 
     <script>
-        // Module Initialization Scopes
         let web3;
-        let detector;
+        let model;
         let tokenBalance = 0.00;
         let currentBlock = 749210;
         const synth = window.speechSynthesis;
+        let lastSpokenTime = 0; // Throttle voice triggers so it does not stutter
         
         const video = document.getElementById('webcam');
         const terminal = document.getElementById('terminal');
@@ -282,122 +223,130 @@
             terminal.scrollTop = terminal.scrollHeight;
         }
 
-        // Initialize Local Web3 Identity Engine
         function setupWeb3Node() {
             web3 = new Web3();
             const account = web3.eth.accounts.create();
             document.getElementById('wallet-addr').innerText = account.address.substring(0,6) + "..." + account.address.substring(36);
             document.getElementById('wallet-bal').innerText = "0.00 JNV";
-            printLog("WEB3", `Isolated consensus cryptographic key generated: ${account.address}`);
+            printLog("WEB3", `Consensus cryptographic identity created: ${account.address}`);
         }
 
-        // Native System Vocalizer Speech Function 
         function voiceGuide(objectLabel, safeAction) {
-            if (synth.speaking) return; // Prevent audio overlapping triggers
+            const now = Date.now();
+            // Restrict speech updates to a maximum frequency of once every 4.5 seconds to protect the user's attention span
+            if (synth.speaking || (now - lastSpokenTime < 4500)) return; 
 
             let textInstruction = `Warning. There is a ${objectLabel} directly blocking your path. `;
             if (safeAction === 'right') {
-                textInstruction += "Please clear the area by moving to your right.";
+                textInstruction += "Please clear the path by stepping to your right.";
             } else if (safeAction === 'left') {
-                textInstruction += "Please alter your tracking and step to your left lane.";
+                textInstruction += "Please alter your direction and step to the left lane.";
             } else {
-                textInstruction += "Surrounding vectors are obstructed. Please pause.";
+                textInstruction += "All surrounding routes are blocked. Please stop walking.";
             }
 
             const utterance = new SpeechSynthesisUtterance(textInstruction);
-            utterance.rate = 1.0; 
+            utterance.rate = 0.95; // Slightly slower, easy-to-understand pace
             synth.speak(utterance);
-            printLog("VOCAL ENGINE", `Broadcast instruction vocalized: "${textInstruction}"`);
+            lastSpokenTime = now;
+            printLog("VOCAL ENGINE", `Spoken out loud: "${textInstruction}"`);
         }
 
-        // Main Hardware Trigger and Live Perception Runtime Logic
         btnStart.addEventListener('click', async () => {
             btnStart.disabled = true;
-            btnStart.innerText = "COMPILING RUNTIME INTERFACES...";
-            statusBadge.innerText = "• COMPILING TRANSFORMERS ENGINE...";
+            btnStart.innerText = "LOADING COMPUTER VISION MODEL...";
+            statusBadge.innerText = "• LOADING COCO-SSD...";
             statusBadge.style.color = "var(--accent-blue)";
             
-            // Web browser sound handshake unlock mechanics
+            // Unlocks mobile sound engines
             synth.speak(new SpeechSynthesisUtterance(""));
 
             setupWeb3Node();
 
-            // Fire and hook live hardware camera sensor arrays
+            // Fire Web Camera Stream Pipeline
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: 640, height: 480 }, 
+                    audio: false 
+                });
                 video.srcObject = stream;
-                printLog("HARDWARE", "Camera sensor active stream successfully locked.");
+                printLog("HARDWARE", "Webcam hardware capture running successfully.");
             } catch (err) {
-                printLog("ERROR", "Optical device permissions denied or hardware failure.");
+                printLog("ERROR", "Optical device permissions denied or hardware stream crashed.");
                 alert("This live perception model requires active local webcam stream access permissions.");
+                btnStart.disabled = false;
+                btnStart.innerText = "BOOT ENGINE";
                 return;
             }
 
-            // Load and instantiate client-side browser neural engine
+            // Load COCO-SSD model using standard browser injection APIs securely
             try {
-                printLog("AI PIPELINE", "Downloading object detection weights from network CDN registry (approx 50MB)...");
-                // Calling pipeline using transformers keyword loaded from script wrapper injection tags
-                const { pipeline } = env = { allowLocalModels: false }; // Enforce remote weights processing architecture fetches
-                detector = await samples.transformers.pipeline('object-detection', 'Xenova/detr-resnet-50');
+                printLog("AI PIPELINE", "Downloading object detection neural layers into local browser cache...");
+                model = await cocoSsd.load();
                 
-                printLog("AI PIPELINE", "Neural network parameters loaded completely into memory. Processing frame sequences...");
-                statusBadge.innerText = "• PERCEPTION PIPELINE LIVE";
+                printLog("AI PIPELINE", "Model fully initialized. Beginning continuous spatial threat detection...");
+                statusBadge.innerText = "• PERCEPTION MATRIX ONLINE";
                 statusBadge.style.color = "var(--accent-green)";
-                btnStart.innerText = "PERCEPTION ACTIVE";
+                btnStart.innerText = "GUIDANCE MATRIX ACTIVE";
                 
-                startPerceptionLoop();
+                // Wait briefly for video stream dimensions to load, then execute loop
+                video.onloadeddata = () => {
+                    startPerceptionLoop();
+                };
             } catch (err) {
                 printLog("ERROR", `Compilation of core AI pipeline modules failed: ${err.message}`);
                 console.error(err);
             }
         });
 
-        // Loop Runner: Constantly processes video frames via the loaded AI model
         function startPerceptionLoop() {
             const laneLeft = document.getElementById('lane-left');
             const laneCenter = document.getElementById('lane-center');
             const laneRight = document.getElementById('lane-right');
 
-            setInterval(async () => {
-                if (!detector || video.paused || video.ended) return;
+            // Recursive frame checker via local engine processing loops
+            async function predictFrame() {
+                if (!model || video.paused || video.ended) {
+                    requestAnimationFrame(predictFrame);
+                    return;
+                }
 
-                // Process standard video frame elements dynamically in-memory using Transformers context layers
-                const results = await detector(video);
+                // Call the prediction layer directly on the video context frame element
+                const predictions = await model.detect(video);
                 
                 let centerBlocked = false;
                 let leftBlocked = false;
                 let rightBlocked = false;
                 let activeObstacleItem = "";
 
-                // Reset layout class states
+                // Reset visual highlight borders
                 laneLeft.className = "lane";
                 laneCenter.className = "lane";
                 laneRight.className = "lane";
 
-                results.forEach(prediction => {
-                    // Filter targets with classification certainty score maps > 60%
-                    if (prediction.score > 0.60) {
-                        const box = prediction.box;
-                        // Map center x coordinate configuration arrays from 0.0 to 1.0 scaling rules
-                        const width = video.videoWidth || 640;
-                        const objectMidX = ((box.xmin + box.xmax) / 2) / width;
+                predictions.forEach(prediction => {
+                    // Filter confidence metrics > 55%
+                    if (prediction.score > 0.55) {
+                        const [x, y, width, height] = prediction.bbox;
+                        const videoWidth = video.videoWidth || 640;
+                        const objectMidX = (x + (width / 2)) / videoWidth;
 
-                        // Section the coordinates directly into vertical path tracking states
-                        if (objectMidX > 0.35 && objectMidX < 0.65) {
+                        // Partition screen space mathematically into tracking lanes
+                        if (objectMidX > 0.33 && objectMidX < 0.66) {
                             centerBlocked = true;
-                            activeObstacleItem = prediction.label;
+                            activeObstacleItem = prediction.class;
                             laneCenter.className = "lane active-block";
-                        } else if (objectMidX <= 0.35) {
+                        } else if (objectMidX <= 0.33) {
                             leftBlocked = true;
                             laneLeft.className = "lane active-block";
-                        } else if (objectMidX >= 0.65) {
+                        } else if (objectMidX >= 0.66) {
                             rightBlocked = true;
                             laneRight.className = "lane active-block";
                         }
                     }
                 });
 
-                // Decision Layer: Speak and record ONLY when the center path is obstructed
+                // Decision and Vocal output layer
                 if (centerBlocked) {
                     let bypassRoute = 'none';
                     if (!rightBlocked) {
@@ -406,19 +355,26 @@
                         bypassRoute = 'left';
                     }
 
-                    // Call the browser's Native Text-To-Speech function
+                    // Speak instructions out loud to the blind user
                     voiceGuide(activeObstacleItem, bypassRoute);
 
-                    // Mock Ledger Distribution verification transaction processing
+                    // Web3 Reward Simulation Node Logging 
                     currentBlock += 1;
                     tokenBalance += 0.75;
                     document.getElementById('ledger-block').innerText = `#${currentBlock}`;
                     document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
-                    printLog("LEDGER", `Processed reroute data stream entry verification on Block #${currentBlock}. Added +0.75 JNV payload.`);
+                    printLog("LEDGER", `Logged clearance tracking route to decentralized Block #${currentBlock}. Added +0.75 JNV.`);
                 }
-            }, 1200); // Evaluates frame blocks every 1.2 seconds for real-time edge responses
+
+                // Check the next camera framework tick continuously
+                setTimeout(() => {
+                    requestAnimationFrame(predictFrame);
+                }, 100);
+            }
+
+            // Fire the first loop frame instance recursively
+            predictFrame();
         }
     </script>
 </body>
 </html>
-
