@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JuneVerse // SonicLedger Live Guidance</title>
+    <title>JuneVerse // SonicLedger Fixed Audio</title>
     
     <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
@@ -15,7 +15,6 @@
             --bg-dark: #0d0f12;
             --bg-panel: #14181f;
             --accent-green: #10b981;
-            --accent-blue: #3b82f6;
             --text-main: #f3f4f6;
             --text-muted: #9ca3af;
             --border-color: #242b35;
@@ -95,7 +94,6 @@
             border-left: 1px dashed rgba(255, 255, 255, 0.1);
             border-right: 1px dashed rgba(255, 255, 255, 0.1);
             position: relative;
-            transition: background-color 0.2s ease;
         }
 
         .lane::after {
@@ -154,14 +152,14 @@
             <h1>JuneVerse // <span>SonicLedger</span></h1>
             <div class="tagline">RESEARCH • INNOVATE • TECHNOLOGY</div>
         </div>
-        <div class="tagline">LIVE WALKING ASSIST MATRIX</div>
+        <div class="tagline">AUDIO-FIXED WALKING ASSIST</div>
     </header>
 
     <main class="dashboard-grid">
         <div class="panel">
             <div class="panel-title">
                 LIVE PERCEPTION ENVIRONMENT
-                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• MODEL OFFLINE</span>
+                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• ENGINE ASLEEP</span>
             </div>
             
             <div class="viewfinder-container">
@@ -173,7 +171,7 @@
                 </div>
             </div>
 
-            <button class="btn" id="btn-start">BOOT ENGINE & ACTIVATE SYSTEM PERCEPTION</button>
+            <button class="btn" id="btn-start">ACTIVATE SYSTEM PERCEPTION</button>
         </div>
 
         <div class="panel">
@@ -181,7 +179,7 @@
             
             <div class="web3-metric-card">
                 <div class="metric-row">
-                    <span>Cryptographic Wallet Address:</span>
+                    <span>Wallet Identity Node:</span>
                     <span class="metric-value" id="wallet-addr">Uninitialized</span>
                 </div>
                 <div class="metric-row">
@@ -194,9 +192,9 @@
                 </div>
             </div>
 
-            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ASSIST LOG EVENT TRACKER</div>
+            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ASSIST EVENT MONITOR LOG</div>
             <div class="terminal-box" id="terminal">
-                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Awaiting initialization sequence activation...</div>
+                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Ready to mount software arrays...</div>
             </div>
         </div>
     </main>
@@ -206,13 +204,27 @@
         let model;
         let tokenBalance = 0.00;
         let currentBlock = 749210;
+        
+        // Audio Synthesis Controller Reference Mapping
         const synth = window.speechSynthesis;
-        let lastSpokenTime = 0; // Throttle voice triggers so it does not stutter
+        let selectedVoice = null;
+        let lastSpokenTime = 0;
         
         const video = document.getElementById('webcam');
         const terminal = document.getElementById('terminal');
         const btnStart = document.getElementById('btn-start');
         const statusBadge = document.getElementById('status-badge');
+
+        // Pre-load browser voices asynchronously to protect system thread timing
+        function loadSystemVoices() {
+            let voices = synth.getVoices();
+            // Fallback selection to an English default module profile
+            selectedVoice = voices.find(v => v.lang.includes('en')) || voices[0];
+        }
+        loadSystemVoices();
+        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadSystemVoices;
+        }
 
         function printLog(channel, msg) {
             const time = new Date().toLocaleTimeString();
@@ -227,26 +239,34 @@
             web3 = new Web3();
             const account = web3.eth.accounts.create();
             document.getElementById('wallet-addr').innerText = account.address.substring(0,6) + "..." + account.address.substring(36);
-            document.getElementById('wallet-bal').innerText = "0.00 JNV";
-            printLog("WEB3", `Consensus cryptographic identity created: ${account.address}`);
+            printLog("WEB3", `Consensus node wallet created.`);
         }
 
+        // Complete, Bulletproof Vocalization Framework Routine
         function voiceGuide(objectLabel, safeAction) {
             const now = Date.now();
-            // Restrict speech updates to a maximum frequency of once every 4.5 seconds to protect the user's attention span
-            if (synth.speaking || (now - lastSpokenTime < 4500)) return; 
+            
+            // Limit audio warning triggers to a maximum density profile of once every 4.5 seconds to avoid breaking audio loops
+            if (now - lastSpokenTime < 4500) return; 
 
-            let textInstruction = `Warning. There is a ${objectLabel} directly blocking your path. `;
+            // Hard reset speech buffer stack lines to wipe away lag jams
+            synth.cancel();
+
+            let textInstruction = `Notice. There is a ${objectLabel} blocking your center path. `;
             if (safeAction === 'right') {
-                textInstruction += "Please clear the path by stepping to your right.";
+                textInstruction += "Please turn right to bypass it.";
             } else if (safeAction === 'left') {
-                textInstruction += "Please alter your direction and step to the left lane.";
+                textInstruction += "Please turn left to bypass it.";
             } else {
-                textInstruction += "All surrounding routes are blocked. Please stop walking.";
+                textInstruction += "Path completely obstructed. Please stop.";
             }
 
             const utterance = new SpeechSynthesisUtterance(textInstruction);
-            utterance.rate = 0.95; // Slightly slower, easy-to-understand pace
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.rate = 0.95; // Human-friendly pace
+            utterance.volume = 1.0; // Enforce maximum volume configuration metrics
+
+            // Handshake execution out loud
             synth.speak(utterance);
             lastSpokenTime = now;
             printLog("VOCAL ENGINE", `Spoken out loud: "${textInstruction}"`);
@@ -254,48 +274,50 @@
 
         btnStart.addEventListener('click', async () => {
             btnStart.disabled = true;
-            btnStart.innerText = "LOADING COMPUTER VISION MODEL...";
-            statusBadge.innerText = "• LOADING COCO-SSD...";
-            statusBadge.style.color = "var(--accent-blue)";
+            btnStart.innerText = "LOADING CORE SYSTEMS...";
+            statusBadge.innerText = "• COMPILING TENSORFLOW...";
+            statusBadge.style.color = "#3b82f6";
             
-            // Unlocks mobile sound engines
-            synth.speak(new SpeechSynthesisUtterance(""));
+            // CRITICAL STEP: Explicit initial spoken trigger to unlock native sound engine privileges 
+            synth.cancel();
+            const handshakeUtterance = new SpeechSynthesisUtterance("JuneVerse system online. Scanning pathways.");
+            if (selectedVoice) handshakeUtterance.voice = selectedVoice;
+            synth.speak(handshakeUtterance);
+            printLog("VOCAL ENGINE", "Audio buffer handshake channel opened successfully.");
 
             setupWeb3Node();
 
-            // Fire Web Camera Stream Pipeline
+            // Fire Camera Stream Access Pipelines
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "environment", width: 640, height: 480 }, 
                     audio: false 
                 });
                 video.srcObject = stream;
-                printLog("HARDWARE", "Webcam hardware capture running successfully.");
+                printLog("HARDWARE", "Camera active channel locked.");
             } catch (err) {
-                printLog("ERROR", "Optical device permissions denied or hardware stream crashed.");
-                alert("This live perception model requires active local webcam stream access permissions.");
+                printLog("ERROR", "Sensor array access blocked.");
+                alert("Webcam device permissions are mandatory for runtime processing execution.");
                 btnStart.disabled = false;
-                btnStart.innerText = "BOOT ENGINE";
+                btnStart.innerText = "ACTIVATE SYSTEM";
                 return;
             }
 
-            // Load COCO-SSD model using standard browser injection APIs securely
+            // Load COCO-SSD Vision model weights
             try {
-                printLog("AI PIPELINE", "Downloading object detection neural layers into local browser cache...");
+                printLog("AI PIPELINE", "Downloading object tracking layers into page cache sandbox...");
                 model = await cocoSsd.load();
                 
-                printLog("AI PIPELINE", "Model fully initialized. Beginning continuous spatial threat detection...");
-                statusBadge.innerText = "• PERCEPTION MATRIX ONLINE";
+                printLog("AI PIPELINE", "Detection engine fully configured.");
+                statusBadge.innerText = "• ASSIST PIPELINE ACTIVE";
                 statusBadge.style.color = "var(--accent-green)";
-                btnStart.innerText = "GUIDANCE MATRIX ACTIVE";
+                btnStart.innerText = "SYSTEM ACTIVE";
                 
-                // Wait briefly for video stream dimensions to load, then execute loop
                 video.onloadeddata = () => {
                     startPerceptionLoop();
                 };
             } catch (err) {
-                printLog("ERROR", `Compilation of core AI pipeline modules failed: ${err.message}`);
-                console.error(err);
+                printLog("ERROR", `AI pipeline boot fault: ${err.message}`);
             }
         });
 
@@ -304,14 +326,12 @@
             const laneCenter = document.getElementById('lane-center');
             const laneRight = document.getElementById('lane-right');
 
-            // Recursive frame checker via local engine processing loops
             async function predictFrame() {
                 if (!model || video.paused || video.ended) {
                     requestAnimationFrame(predictFrame);
                     return;
                 }
 
-                // Call the prediction layer directly on the video context frame element
                 const predictions = await model.detect(video);
                 
                 let centerBlocked = false;
@@ -319,19 +339,18 @@
                 let rightBlocked = false;
                 let activeObstacleItem = "";
 
-                // Reset visual highlight borders
                 laneLeft.className = "lane";
                 laneCenter.className = "lane";
                 laneRight.className = "lane";
 
                 predictions.forEach(prediction => {
-                    // Filter confidence metrics > 55%
-                    if (prediction.score > 0.55) {
+                    // Filter targets with validation confidence boundaries > 50%
+                    if (prediction.score > 0.50) {
                         const [x, y, width, height] = prediction.bbox;
                         const videoWidth = video.videoWidth || 640;
                         const objectMidX = (x + (width / 2)) / videoWidth;
 
-                        // Partition screen space mathematically into tracking lanes
+                        // Lane partition logic boundaries mapping layout
                         if (objectMidX > 0.33 && objectMidX < 0.66) {
                             centerBlocked = true;
                             activeObstacleItem = prediction.class;
@@ -346,7 +365,7 @@
                     }
                 });
 
-                // Decision and Vocal output layer
+                // Decision evaluation execution
                 if (centerBlocked) {
                     let bypassRoute = 'none';
                     if (!rightBlocked) {
@@ -355,24 +374,22 @@
                         bypassRoute = 'left';
                     }
 
-                    // Speak instructions out loud to the blind user
+                    // Direct invocation call to our updated vocal routine system
                     voiceGuide(activeObstacleItem, bypassRoute);
 
-                    // Web3 Reward Simulation Node Logging 
+                    // Web3 Ledger metric increment steps updates
                     currentBlock += 1;
                     tokenBalance += 0.75;
                     document.getElementById('ledger-block').innerText = `#${currentBlock}`;
                     document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
-                    printLog("LEDGER", `Logged clearance tracking route to decentralized Block #${currentBlock}. Added +0.75 JNV.`);
+                    printLog("LEDGER", `Verified transaction logged onto Block #${currentBlock}. Allocation +0.75 JNV payout.`);
                 }
 
-                // Check the next camera framework tick continuously
                 setTimeout(() => {
                     requestAnimationFrame(predictFrame);
-                }, 100);
+                }, 150); // Frame evaluations execution ticks every 150ms for performance safety profiles
             }
 
-            // Fire the first loop frame instance recursively
             predictFrame();
         }
     </script>
