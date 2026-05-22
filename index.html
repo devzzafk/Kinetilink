@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JuneVerse // SonicLedger MVP</title>
+    <title>JuneVerse // SonicLedger Live Perception</title>
     
     <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
 
     <style>
@@ -45,7 +46,6 @@
         header h1 {
             font-size: 1.8rem;
             letter-spacing: -0.05em;
-            color: var(--text-main);
         }
 
         header h1 span {
@@ -58,7 +58,6 @@
             color: var(--text-muted);
         }
 
-        /* Dashboard Grid Layout */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 1.2fr 1fr;
@@ -91,7 +90,6 @@
             justify-content: space-between;
         }
 
-        /* Live Perception Camera View Container */
         .viewfinder-container {
             position: relative;
             width: 100%;
@@ -106,10 +104,8 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Mirror view for natural interaction */
         }
 
-        /* Lane Overlay Markers for Demo Visualization */
         .lane-overlay {
             position: absolute;
             top: 0;
@@ -125,6 +121,7 @@
             border-left: 1px dashed rgba(255, 255, 255, 0.1);
             border-right: 1px dashed rgba(255, 255, 255, 0.1);
             position: relative;
+            transition: background-color 0.2s ease;
         }
 
         .lane::after {
@@ -144,7 +141,6 @@
             border: 1px solid #ef4444;
         }
 
-        /* Web3 Status and Terminal Fields */
         .web3-metric-card {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border-color);
@@ -165,7 +161,6 @@
             color: var(--accent-green);
             word-break: break-all;
             text-align: right;
-            padding-left: 1rem;
         }
 
         .terminal-box {
@@ -175,7 +170,7 @@
             padding: 1rem;
             font-family: 'Space Mono', monospace;
             font-size: 0.85rem;
-            height: 220px;
+            height: 250px;
             overflow-y: auto;
             color: #34d399;
             flex-grow: 1;
@@ -183,7 +178,6 @@
 
         .terminal-line {
             margin-bottom: 0.4rem;
-            line-height: 1.4;
         }
 
         .terminal-timestamp {
@@ -191,7 +185,6 @@
             margin-right: 0.5rem;
         }
 
-        /* UI Action Buttons */
         .btn {
             background-color: var(--accent-green);
             color: #000;
@@ -206,44 +199,10 @@
             margin-top: 1rem;
         }
 
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            margin-top: 0.5rem;
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-
-        /* Simulation Buttons for Prototype presentation mapping */
-        .sim-controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .btn-sim {
-            background: #1e2530;
-            color: #fff;
-            border: 1px solid var(--border-color);
-            padding: 0.5rem;
-            font-family: 'Space Mono', monospace;
-            font-size: 0.75rem;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .btn-sim:hover {
-            background: var(--accent-blue);
-            color: #fff;
+        .btn:disabled {
+            background-color: #1e2530;
+            color: var(--text-muted);
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -254,14 +213,14 @@
             <h1>JuneVerse // <span>SonicLedger</span></h1>
             <div class="tagline">RESEARCH • INNOVATE • TECHNOLOGY</div>
         </div>
-        <div class="tagline" id="live-time">SYS: ACTIVE</div>
+        <div class="tagline">LIVE AI PERCEPTION NODE</div>
     </header>
 
     <main class="dashboard-grid">
         <div class="panel">
             <div class="panel-title">
                 LIVE PERCEPTION ENVIRONMENT
-                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• MODEL STANDBY</span>
+                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• ARCHITECTURE OFFLINE</span>
             </div>
             
             <div class="viewfinder-container">
@@ -273,200 +232,193 @@
                 </div>
             </div>
 
-            <button class="btn" id="btn-init">INITIALIZE AUDIO & SYSTEM PERCEPTION</button>
-            
-            <div style="margin-top: 1.5rem;">
-                <div class="tagline" style="margin-bottom: 0.5rem;">PROTOTYPE PRESENTATION MAP SIMULATORS:</div>
-                <div class="sim-controls">
-                    <button class="btn-sim" onclick="simulateObstacle('chair')">Simulate Chair</button>
-                    <button class="btn-sim" onclick="simulateObstacle('scooter')">Simulate Scooter</button>
-                    <button class="btn-sim" onclick="clearSimulation()">Clear Path</button>
-                </div>
-            </div>
+            <button class="btn" id="btn-start">BOOT ENGINE & STREAM LIVE CAMERA</button>
         </div>
 
         <div class="panel">
-            <div class="panel-title">DECENTRALIZED ACCESS PRIVILEGE LEDGER</div>
+            <div class="panel-title">DECENTRALIZED SPACE ACCOUNTABILITY MATRIX</div>
             
             <div class="web3-metric-card">
                 <div class="metric-row">
-                    <span>Decentralized Wallet Node:</span>
+                    <span>Cryptographic Node Wallet:</span>
                     <span class="metric-value" id="wallet-addr">Uninitialized</span>
                 </div>
                 <div class="metric-row">
-                    <span>Token Allocation Balance:</span>
+                    <span>Validation Reward Balance:</span>
                     <span class="metric-value" id="wallet-bal">0.00 JNV</span>
                 </div>
                 <div class="metric-row">
-                    <span>Validated Environment Block:</span>
+                    <span>Active Distributed Block:</span>
                     <span class="metric-value" id="ledger-block">#749,210</span>
                 </div>
             </div>
 
-            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ACCOUNTABILITY & DATA RECORD</div>
+            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE TRACKING STRUCT LOG</div>
             <div class="terminal-box" id="terminal">
-                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span>Awaiting peripheral boot pipeline initialization sequences...</div>
+                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Awaiting deployment sequence signature activation...</div>
             </div>
-
-            <button class="btn btn-secondary" id="btn-verify" onclick="manualBlockVerification()">MANUALLY BROADCAST CLEAR PATH NODE (+5 JNV)</button>
         </div>
     </main>
 
     <script>
-        // System variables
+        // Module Initialization Scopes
         let web3;
-        let userWalletAddress;
+        let detector;
         let tokenBalance = 0.00;
-        let currentBlockNumber = 749210;
+        let currentBlock = 749210;
         const synth = window.speechSynthesis;
-        let mockDetectionInterval;
-
-        // Initialize UI Elements
+        
+        const video = document.getElementById('webcam');
         const terminal = document.getElementById('terminal');
-        const btnInit = document.getElementById('btn-init');
+        const btnStart = document.getElementById('btn-start');
         const statusBadge = document.getElementById('status-badge');
 
-        // Log printing engine to the localized UI Terminal window
-        function logToTerminal(sender, message) {
+        function printLog(channel, msg) {
             const time = new Date().toLocaleTimeString();
-            const line = document.createElement('div');
-            line.className = 'terminal-line';
-            line.innerHTML = `<span class="terminal-timestamp">[${time}] (${sender})</span> ${message}`;
-            terminal.appendChild(line);
+            const element = document.createElement('div');
+            element.className = 'terminal-line';
+            element.innerHTML = `<span class="terminal-timestamp">[${time}] (${channel})</span> ${msg}`;
+            terminal.appendChild(element);
             terminal.scrollTop = terminal.scrollHeight;
         }
 
-        // Initialize Web3 Client-Side simulation & Core Cryptographic Addresses
-        function initWeb3Mock() {
-            try {
-                // Instantiating Web3 Library structure safely
-                web3 = new Web3();
-                // Generate secure keypair locally
-                const account = web3.eth.accounts.create();
-                userWalletAddress = account.address;
-                
-                document.getElementById('wallet-addr').innerText = userWalletAddress.substring(0,6) + "..." + userWalletAddress.substring(36);
-                document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
-                logToTerminal("WEB3", `Local node wallet successfully generated: ${userWalletAddress}`);
-            } catch (err) {
-                console.error("Web3 init error, defaulting to local fallback", err);
-                document.getElementById('wallet-addr').innerText = "0x71C...B29";
-            }
+        // Initialize Local Web3 Identity Engine
+        function setupWeb3Node() {
+            web3 = new Web3();
+            const account = web3.eth.accounts.create();
+            document.getElementById('wallet-addr').innerText = account.address.substring(0,6) + "..." + account.address.substring(36);
+            document.getElementById('wallet-bal').innerText = "0.00 JNV";
+            printLog("WEB3", `Isolated consensus cryptographic key generated: ${account.address}`);
         }
 
-        // Initialize Camera streams natively securely
-        async function initCamera() {
-            const video = document.getElementById('webcam');
+        // Native System Vocalizer Speech Function 
+        function voiceGuide(objectLabel, safeAction) {
+            if (synth.speaking) return; // Prevent audio overlapping triggers
+
+            let textInstruction = `Warning. There is a ${objectLabel} directly blocking your path. `;
+            if (safeAction === 'right') {
+                textInstruction += "Please clear the area by moving to your right.";
+            } else if (safeAction === 'left') {
+                textInstruction += "Please alter your tracking and step to your left lane.";
+            } else {
+                textInstruction += "Surrounding vectors are obstructed. Please pause.";
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textInstruction);
+            utterance.rate = 1.0; 
+            synth.speak(utterance);
+            printLog("VOCAL ENGINE", `Broadcast instruction vocalized: "${textInstruction}"`);
+        }
+
+        // Main Hardware Trigger and Live Perception Runtime Logic
+        btnStart.addEventListener('click', async () => {
+            btnStart.disabled = true;
+            btnStart.innerText = "COMPILING RUNTIME INTERFACES...";
+            statusBadge.innerText = "• COMPILING TRANSFORMERS ENGINE...";
+            statusBadge.style.color = "var(--accent-blue)";
+            
+            // Web browser sound handshake unlock mechanics
+            synth.speak(new SpeechSynthesisUtterance(""));
+
+            setupWeb3Node();
+
+            // Fire and hook live hardware camera sensor arrays
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                 video.srcObject = stream;
-                logToTerminal("HARDWARE", "System webcam interface feed compiled successfully.");
+                printLog("HARDWARE", "Camera sensor active stream successfully locked.");
             } catch (err) {
-                logToTerminal("ERROR", "Access to device optical sensor array denied or missing.");
-                alert("Camera permission required to display live evaluation grid.");
-            }
-        }
-
-        // Initialize core process loops on button interact
-        btnInit.addEventListener('click', async () => {
-            // Trigger an explicit audio profile activation to satisfy modern browser security restrictions
-            const unlockUtterance = new SpeechSynthesisUtterance("System active.");
-            unlockUtterance.volume = 0; 
-            synth.speak(unlockUtterance);
-
-            btnInit.innerText = "PERCEPTION ACTIVE";
-            btnInit.style.backgroundColor = "#1e2530";
-            btnInit.style.color = var(--text-muted);
-            btnInit.disabled = true;
-
-            statusBadge.innerText = "• SYSTEM DEPLOYED";
-            statusBadge.style.color = "var(--accent-green)";
-
-            initWeb3Mock();
-            await initCamera();
-            
-            logToTerminal("SYSTEM", "Dynamic Audio Guidance logic running on passive orientation matrix loop.");
-        });
-
-        // Main Navigation Intelligent Voice Output Controller
-        function speakDirectionalGuide(objectLabel, obstructedLane, safeAction) {
-            if (synth.speaking) return; // Prevent text-to-speech stack overlap strings
-
-            let dynamicInstruction = `Notice. There is a ${objectLabel} blocking your center path. `;
-            
-            if (safeAction === 'right') {
-                dynamicInstruction += "Please shift towards your right side to maintain clear navigation space.";
-            } else if (safeAction === 'left') {
-                dynamicInstruction += "Please realign your direction to the left lane to continue safely.";
-            } else {
-                dynamicInstruction += "Alert. Surrounding alternate directions are obstructed. Please halt forward movement.";
-            }
-
-            const utterance = new SpeechSynthesisUtterance(dynamicInstruction);
-            utterance.rate = 0.95; // Clear human narration metric speeds
-            utterance.pitch = 1.0;
-            
-            synth.speak(utterance);
-            logToTerminal("GUIDE ENGINE", `Executed Voice Instruction: "${dynamicInstruction.substring(0, 45)}..."`);
-        }
-
-        // Demo Prototype Execution Simulator: Maps objects to geometric screen partitions
-        function simulateObstacle(objectType) {
-            // Reset state views
-            clearSimulation();
-            
-            logToTerminal("PERCEPTION", `Live perception tracked obstruction target: [${objectType.toUpperCase()}]`);
-            
-            // Flag center lane element active and calculate safe output channel
-            document.getElementById('lane-center').className = 'lane active-block';
-            
-            let safeWay = 'right';
-            if (objectType === 'scooter') {
-                document.getElementById('lane-left').className = 'lane active-block'; // Block left too
-                safeWay = 'right';
-            } else {
-                document.getElementById('lane-right').className = 'lane active-block'; // Block right too
-                safeWay = 'left';
-            }
-
-            // Fire vocal alert
-            speakDirectionalGuide(objectType, 'center', safeWay);
-
-            // Execute automated Web3 verification processing workflow pipeline updates
-            triggerAutomatedLedgerLogging(objectType, safeWay);
-        }
-
-        function clearSimulation() {
-            document.getElementById('lane-left').className = 'lane';
-            document.getElementById('lane-center').className = 'lane';
-            document.getElementById('lane-right').className = 'lane';
-            logToTerminal("PERCEPTION", "Target perimeter clear. Center path safe.");
-        }
-
-        // Web3 Decentralized Settlement Simulation Scripts
-        function triggerAutomatedLedgerLogging(detectedHazard, calculatedEscapeRoute) {
-            currentBlockNumber += 1;
-            tokenBalance += 0.50; // Incentive payout allocation for processing environment computations local node
-            
-            document.getElementById('ledger-block').innerText = `#${currentBlockNumber}`;
-            document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
-            
-            logToTerminal("LEDGER", `Block #${currentBlockNumber} produced. Data payload logged: [Obstruction: ${detectedHazard}, Override: ${calculatedEscapeRoute}]`);
-        }
-
-        function manualBlockVerification() {
-            if (!userWalletAddress) {
-                alert("Please initialize the system application pipeline framework first.");
+                printLog("ERROR", "Optical device permissions denied or hardware failure.");
+                alert("This live perception model requires active local webcam stream access permissions.");
                 return;
             }
-            currentBlockNumber += 1;
-            tokenBalance += 5.00; // Payout token matrix increments
-            
-            document.getElementById('ledger-block').innerText = `#${currentBlockNumber}`;
-            document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
-            
-            logToTerminal("REWARD POOL", `Crowdsourced validation broadcast successful. Verified Clear Safe Node added to Block #${currentBlockNumber}. +5.00 JNV allocated.`);
+
+            // Load and instantiate client-side browser neural engine
+            try {
+                printLog("AI PIPELINE", "Downloading object detection weights from network CDN registry (approx 50MB)...");
+                // Calling pipeline using transformers keyword loaded from script wrapper injection tags
+                const { pipeline } = env = { allowLocalModels: false }; // Enforce remote weights processing architecture fetches
+                detector = await samples.transformers.pipeline('object-detection', 'Xenova/detr-resnet-50');
+                
+                printLog("AI PIPELINE", "Neural network parameters loaded completely into memory. Processing frame sequences...");
+                statusBadge.innerText = "• PERCEPTION PIPELINE LIVE";
+                statusBadge.style.color = "var(--accent-green)";
+                btnStart.innerText = "PERCEPTION ACTIVE";
+                
+                startPerceptionLoop();
+            } catch (err) {
+                printLog("ERROR", `Compilation of core AI pipeline modules failed: ${err.message}`);
+                console.error(err);
+            }
+        });
+
+        // Loop Runner: Constantly processes video frames via the loaded AI model
+        function startPerceptionLoop() {
+            const laneLeft = document.getElementById('lane-left');
+            const laneCenter = document.getElementById('lane-center');
+            const laneRight = document.getElementById('lane-right');
+
+            setInterval(async () => {
+                if (!detector || video.paused || video.ended) return;
+
+                // Process standard video frame elements dynamically in-memory using Transformers context layers
+                const results = await detector(video);
+                
+                let centerBlocked = false;
+                let leftBlocked = false;
+                let rightBlocked = false;
+                let activeObstacleItem = "";
+
+                // Reset layout class states
+                laneLeft.className = "lane";
+                laneCenter.className = "lane";
+                laneRight.className = "lane";
+
+                results.forEach(prediction => {
+                    // Filter targets with classification certainty score maps > 60%
+                    if (prediction.score > 0.60) {
+                        const box = prediction.box;
+                        // Map center x coordinate configuration arrays from 0.0 to 1.0 scaling rules
+                        const width = video.videoWidth || 640;
+                        const objectMidX = ((box.xmin + box.xmax) / 2) / width;
+
+                        // Section the coordinates directly into vertical path tracking states
+                        if (objectMidX > 0.35 && objectMidX < 0.65) {
+                            centerBlocked = true;
+                            activeObstacleItem = prediction.label;
+                            laneCenter.className = "lane active-block";
+                        } else if (objectMidX <= 0.35) {
+                            leftBlocked = true;
+                            laneLeft.className = "lane active-block";
+                        } else if (objectMidX >= 0.65) {
+                            rightBlocked = true;
+                            laneRight.className = "lane active-block";
+                        }
+                    }
+                });
+
+                // Decision Layer: Speak and record ONLY when the center path is obstructed
+                if (centerBlocked) {
+                    let bypassRoute = 'none';
+                    if (!rightBlocked) {
+                        bypassRoute = 'right';
+                    } else if (!leftBlocked) {
+                        bypassRoute = 'left';
+                    }
+
+                    // Call the browser's Native Text-To-Speech function
+                    voiceGuide(activeObstacleItem, bypassRoute);
+
+                    // Mock Ledger Distribution verification transaction processing
+                    currentBlock += 1;
+                    tokenBalance += 0.75;
+                    document.getElementById('ledger-block').innerText = `#${currentBlock}`;
+                    document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
+                    printLog("LEDGER", `Processed reroute data stream entry verification on Block #${currentBlock}. Added +0.75 JNV payload.`);
+                }
+            }, 1200); // Evaluates frame blocks every 1.2 seconds for real-time edge responses
         }
     </script>
 </body>
 </html>
+
