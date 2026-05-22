@@ -34,29 +34,22 @@
     overflow: hidden;
   }
 
-  /* ── SCANLINE OVERLAY ── */
   body::before {
     content: '';
     position: fixed; inset: 0; z-index: 9999; pointer-events: none;
     background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,.08) 2px,
-      rgba(0,0,0,.08) 4px
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,.07) 2px, rgba(0,0,0,.07) 4px
     );
   }
 
-  /* ── LAYOUT ── */
   #app {
     display: grid;
     grid-template-rows: 52px 1fr 40px;
-    grid-template-columns: 1fr;
     height: 100vh;
-    gap: 0;
   }
 
-  /* ── TOPBAR ── */
+  /* TOPBAR */
   #topbar {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 20px;
@@ -66,15 +59,11 @@
   }
   .logo {
     display: flex; align-items: center; gap: 10px;
-    font-size: 15px; font-weight: 700; letter-spacing: .05em;
-    color: #fff;
+    font-size: 15px; font-weight: 700; letter-spacing: .05em; color: #fff;
   }
   .logo-icon {
-    width: 28px; height: 28px;
-    background: var(--cyan);
-    border-radius: 6px;
-    display: grid; place-items: center;
-    font-size: 14px;
+    width: 28px; height: 28px; background: var(--cyan);
+    border-radius: 6px; display: grid; place-items: center; font-size: 14px;
   }
   .logo span { color: var(--cyan); }
   .topbar-center {
@@ -82,32 +71,27 @@
     font-family: var(--font-mono); font-size: 11px; color: var(--dim);
     letter-spacing: .12em; text-transform: uppercase;
   }
-  .topbar-right {
-    display: flex; align-items: center; gap: 14px;
-  }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
   .badge {
     font-family: var(--font-mono); font-size: 10px; padding: 3px 8px;
-    border-radius: 4px; letter-spacing: .08em; text-transform: uppercase;
-    border: 1px solid;
+    border-radius: 4px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid;
   }
   .badge-green { color: var(--green); border-color: var(--green); background: rgba(16,185,129,.08); }
   .badge-cyan  { color: var(--cyan);  border-color: var(--cyan);  background: rgba(6,182,212,.08); }
   .badge-red   { color: var(--red);   border-color: var(--red);   background: rgba(239,68,68,.08); }
+  .badge-amber { color: var(--amber); border-color: var(--amber); background: rgba(245,158,11,.08); }
 
-  /* ── MAIN CONTENT ── */
+  /* MAIN */
   #main {
     display: grid;
     grid-template-columns: 1fr 380px;
-    gap: 0;
     overflow: hidden;
   }
 
-  /* ── CAMERA PANEL ── */
+  /* CAMERA PANEL */
   #cam-panel {
-    position: relative;
-    background: #000;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
+    position: relative; background: #000;
+    display: flex; align-items: stretch; overflow: hidden;
   }
 
   #video {
@@ -115,70 +99,89 @@
     object-fit: cover;
     transform: scaleX(-1);
     display: block;
+    /* GPU compositing layer - reduces main thread paint cost */
+    will-change: transform;
   }
 
   #overlay-canvas {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     pointer-events: none;
+    /* own compositing layer */
+    will-change: contents;
   }
 
-  /* lane dividers */
   .lane-div {
-    position: absolute; top: 0; bottom: 0;
-    width: 1px; pointer-events: none;
-    background: linear-gradient(to bottom, transparent, rgba(6,182,212,.35) 20%, rgba(6,182,212,.35) 80%, transparent);
+    position: absolute; top: 0; bottom: 0; width: 1px; pointer-events: none;
+    background: linear-gradient(to bottom, transparent, rgba(6,182,212,.4) 20%, rgba(6,182,212,.4) 80%, transparent);
   }
   #lane-l { left: 33.33%; }
   #lane-r { left: 66.66%; }
 
-  /* lane labels */
   .lane-label {
     position: absolute; top: 14px;
     font-family: var(--font-mono); font-size: 9px;
     letter-spacing: .15em; text-transform: uppercase;
-    color: rgba(6,182,212,.6);
-    pointer-events: none;
+    color: rgba(6,182,212,.7); pointer-events: none;
+    text-shadow: 0 0 8px rgba(6,182,212,.5);
   }
   #lbl-l { left: 8%; }
   #lbl-c { left: 50%; transform: translateX(-50%); }
   #lbl-r { right: 8%; }
 
-  /* status hud */
+  /* PROXIMITY BAR — top of camera feed */
+  #proximity-bar {
+    position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; align-items: center;
+    background: rgba(10,12,15,.8);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 14px;
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--dim); letter-spacing: .1em;
+    pointer-events: none;
+  }
+  #prox-label { color: var(--text); }
+  #prox-bar-fill {
+    width: 80px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  #prox-fill-inner {
+    height: 100%; width: 0%; border-radius: 3px;
+    background: var(--green);
+    transition: width .2s, background .2s;
+  }
+
+  /* STATUS HUD */
   #status-hud {
     position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
     display: flex; gap: 8px; align-items: center;
-    background: rgba(10,12,15,.75);
+    background: rgba(10,12,15,.82);
     border: 1px solid var(--border);
     backdrop-filter: blur(8px);
-    border-radius: 30px;
-    padding: 7px 18px;
+    border-radius: 30px; padding: 7px 18px;
     font-family: var(--font-mono); font-size: 10px;
-    letter-spacing: .1em; color: var(--dim);
-    white-space: nowrap;
+    letter-spacing: .1em; color: var(--dim); white-space: nowrap;
   }
   #status-hud .dot {
     width: 7px; height: 7px; border-radius: 50%;
-    background: var(--dim); flex-shrink: 0;
-    transition: background .3s;
+    background: var(--dim); flex-shrink: 0; transition: background .3s;
   }
-  #status-hud.active .dot  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 1.2s infinite; }
-  #status-hud.warning .dot { background: var(--red);   box-shadow: 0 0 8px var(--red);   animation: blink .6s infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
-
+  #status-hud.active  .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 1.2s infinite; }
+  #status-hud.warning .dot { background: var(--red);   box-shadow: 0 0 10px var(--red);  animation: blink .5s infinite; }
+  #status-hud.close   .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: blink .7s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
   #status-text { color: var(--text); }
 
   /* INIT OVERLAY */
   #init-overlay {
     position: absolute; inset: 0;
-    background: rgba(10,12,15,.92);
+    background: rgba(10,12,15,.93);
     backdrop-filter: blur(6px);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 24px; z-index: 20;
+    gap: 22px; z-index: 20;
   }
   .init-logo {
-    font-size: 48px; font-weight: 700;
+    font-size: 52px; font-weight: 700;
     background: linear-gradient(135deg, var(--cyan), var(--green));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     letter-spacing: -.02em;
@@ -186,55 +189,42 @@
   .init-sub {
     font-family: var(--font-mono); font-size: 11px;
     color: var(--dim); letter-spacing: .15em; text-transform: uppercase;
-    text-align: center; line-height: 1.8;
+    text-align: center; line-height: 2;
   }
   #btn-init {
-    margin-top: 8px;
-    padding: 14px 40px;
-    background: transparent;
-    border: 1px solid var(--cyan);
-    color: var(--cyan);
-    font-family: var(--font-mono); font-size: 12px;
+    margin-top: 8px; padding: 14px 44px;
+    background: transparent; border: 1px solid var(--cyan);
+    color: var(--cyan); font-family: var(--font-mono); font-size: 12px;
     letter-spacing: .18em; text-transform: uppercase;
     border-radius: 6px; cursor: pointer;
-    position: relative; overflow: hidden;
-    transition: color .25s, background .25s;
+    position: relative; overflow: hidden; transition: color .25s;
   }
   #btn-init::before {
-    content: '';
-    position: absolute; inset: 0;
+    content: ''; position: absolute; inset: 0;
     background: var(--cyan);
     transform: scaleX(0); transform-origin: left;
-    transition: transform .25s;
-    z-index: -1;
+    transition: transform .25s; z-index: -1;
   }
   #btn-init:hover { color: #000; }
   #btn-init:hover::before { transform: scaleX(1); }
-
   .init-warning {
     font-family: var(--font-mono); font-size: 10px;
-    color: rgba(239,68,68,.7); letter-spacing: .1em;
-    text-align: center; max-width: 320px; line-height: 1.7;
+    color: rgba(239,68,68,.75); letter-spacing: .1em;
+    text-align: center; max-width: 340px; line-height: 1.8;
   }
 
-  /* ── RIGHT PANEL: TERMINAL ── */
+  /* RIGHT PANEL */
   #right-panel {
-    background: var(--panel);
-    border-left: 1px solid var(--border);
-    display: grid;
-    grid-template-rows: auto auto 1fr auto;
-    overflow: hidden;
+    background: var(--panel); border-left: 1px solid var(--border);
+    display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden;
   }
 
-  /* token row */
   #token-row {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 1px; border-bottom: 1px solid var(--border);
-    background: var(--border);
+    gap: 1px; border-bottom: 1px solid var(--border); background: var(--border);
   }
   .token-card {
-    background: var(--panel);
-    padding: 12px 16px;
+    background: var(--panel); padding: 12px 16px;
     display: flex; flex-direction: column; gap: 3px;
   }
   .token-label {
@@ -245,18 +235,13 @@
     font-family: var(--font-mono); font-size: 18px; font-weight: 700;
     color: #fff; letter-spacing: -.02em;
   }
-  .token-value.cyan  { color: var(--cyan); }
-  .token-value.green { color: var(--green); }
 
-  /* lane status row */
   #lane-status {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 1px; background: var(--border);
-    border-bottom: 1px solid var(--border);
+    gap: 1px; background: var(--border); border-bottom: 1px solid var(--border);
   }
   .ls-cell {
-    background: var(--panel);
-    padding: 8px 10px; text-align: center;
+    background: var(--panel); padding: 8px 10px; text-align: center;
     display: flex; flex-direction: column; gap: 2px;
   }
   .ls-label {
@@ -264,82 +249,56 @@
     color: var(--dim); letter-spacing: .14em; text-transform: uppercase;
   }
   .ls-status {
-    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-    letter-spacing: .06em;
-    transition: color .3s;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .05em; transition: color .25s;
+    word-break: break-all;
   }
   .ls-status.clear   { color: var(--green); }
   .ls-status.hazard  { color: var(--red); animation: blink .5s infinite; }
+  .ls-status.close   { color: var(--amber); animation: blink .7s infinite; }
   .ls-status.unknown { color: var(--dim); }
 
-  /* terminal log */
   #terminal {
     overflow-y: auto; overflow-x: hidden;
     padding: 10px 0;
-    font-family: var(--font-mono); font-size: 10.5px;
-    line-height: 1.65;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    font-family: var(--font-mono); font-size: 10.5px; line-height: 1.65;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
   }
   #terminal::-webkit-scrollbar { width: 3px; }
-  #terminal::-webkit-scrollbar-track { background: transparent; }
   #terminal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
   .log-entry {
-    display: flex; gap: 0; padding: 2px 0;
-    border-bottom: 1px solid rgba(30,37,48,.4);
-    animation: fadeIn .3s ease;
+    display: flex; padding: 2px 0;
+    border-bottom: 1px solid rgba(30,37,48,.35);
+    animation: fadeIn .25s ease;
   }
-  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none} }
 
-  .log-ts {
-    flex-shrink: 0; width: 52px; padding: 1px 10px;
-    color: var(--dim); font-size: 9px; letter-spacing: .05em;
-    align-self: flex-start; padding-top: 3px;
-  }
-  .log-tag {
-    flex-shrink: 0; width: 24px; padding: 1px 4px;
-    font-size: 9px; align-self: flex-start; padding-top: 3px;
-  }
-  .log-msg {
-    flex: 1; padding: 1px 10px 1px 4px;
-    color: var(--text); font-size: 10px; letter-spacing: .02em;
-    word-break: break-all;
-  }
+  .log-ts  { flex-shrink:0; width:52px; padding:2px 10px; color:var(--dim); font-size:9px; letter-spacing:.04em; }
+  .log-tag { flex-shrink:0; width:26px; padding:2px 4px; font-size:9px; }
+  .log-msg { flex:1; padding:2px 10px 2px 4px; font-size:10px; letter-spacing:.02em; word-break:break-all; }
 
-  .tag-info  { color: var(--cyan); }
-  .tag-ok    { color: var(--green); }
-  .tag-warn  { color: var(--amber); }
-  .tag-alert { color: var(--red); }
-  .tag-block { color: #a78bfa; }
-  .tag-token { color: #f472b6; }
+  .tag-info  { color: var(--cyan); }    .msg-info  { color: rgba(6,182,212,.85); }
+  .tag-ok    { color: var(--green); }   .msg-ok    { color: rgba(16,185,129,.9); }
+  .tag-warn  { color: var(--amber); }   .msg-warn  { color: rgba(245,158,11,.95); }
+  .tag-alert { color: var(--red); }     .msg-alert { color: rgba(239,68,68,1); }
+  .tag-block { color: #a78bfa; }        .msg-block { color: rgba(167,139,250,.88); }
+  .tag-token { color: #f472b6; }        .msg-token { color: rgba(244,114,182,.88); }
+  .tag-close { color: var(--amber); }   .msg-close { color: rgba(245,158,11,.95); }
 
-  .msg-info  { color: rgba(6,182,212,.8); }
-  .msg-ok    { color: rgba(16,185,129,.85); }
-  .msg-warn  { color: rgba(245,158,11,.9); }
-  .msg-alert { color: rgba(239,68,68,.95); }
-  .msg-block { color: rgba(167,139,250,.85); }
-  .msg-token { color: rgba(244,114,182,.85); }
-
-  /* bottom status bar */
   #statusbar {
-    height: 40px;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 14px;
-    border-top: 1px solid var(--border);
-    font-family: var(--font-mono); font-size: 9px;
-    color: var(--dim); letter-spacing: .1em;
+    height: 40px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px; border-top: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 9px; color: var(--dim); letter-spacing: .1em;
   }
   #fps-counter { color: var(--green); }
   #block-counter { color: var(--cyan); }
 
-  /* ── FOOTER ── */
+  /* FOOTER */
   #footer {
-    background: var(--panel);
-    border-top: 1px solid var(--border);
+    background: var(--panel); border-top: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 20px;
-    font-family: var(--font-mono); font-size: 9px;
+    padding: 0 20px; font-family: var(--font-mono); font-size: 9px;
     color: var(--dim); letter-spacing: .1em;
   }
   .footer-credits { color: rgba(6,182,212,.5); }
@@ -354,11 +313,11 @@
       <div class="logo-icon">◈</div>
       Sonic<span>Ledger</span>
     </div>
-    <div class="topbar-center">JuneVerse Navigation OS · v2.4.1</div>
+    <div class="topbar-center">JuneVerse Navigation OS · v2.5.0</div>
     <div class="topbar-right">
-      <div class="badge badge-cyan" id="model-badge">MODEL LOADING</div>
+      <div class="badge badge-cyan"  id="model-badge">MODEL LOADING</div>
       <div class="badge badge-green" id="voice-badge">VOICE READY</div>
-      <div class="badge badge-red" id="cam-badge">CAM OFFLINE</div>
+      <div class="badge badge-red"   id="cam-badge">CAM OFFLINE</div>
     </div>
   </div>
 
@@ -370,19 +329,22 @@
       <video id="video" autoplay playsinline muted></video>
       <canvas id="overlay-canvas"></canvas>
 
-      <!-- lane dividers -->
       <div class="lane-div" id="lane-l"></div>
       <div class="lane-div" id="lane-r"></div>
-
-      <!-- lane labels -->
       <div class="lane-label" id="lbl-l">LEFT</div>
       <div class="lane-label" id="lbl-c">CENTER PATH</div>
       <div class="lane-label" id="lbl-r">RIGHT</div>
 
-      <!-- status hud -->
+      <!-- Proximity indicator -->
+      <div id="proximity-bar">
+        PROXIMITY
+        <div id="prox-bar-fill"><div id="prox-fill-inner"></div></div>
+        <span id="prox-label">—</span>
+      </div>
+
       <div id="status-hud">
         <div class="dot"></div>
-        <span id="status-text">Initializing system…</span>
+        <span id="status-text">Initializing…</span>
       </div>
 
       <!-- INIT OVERLAY -->
@@ -390,11 +352,12 @@
         <div class="init-logo">SonicLedger</div>
         <div class="init-sub">
           REAL-TIME BLIND NAVIGATION ASSISTANT<br>
-          JUNEVERSE NETWORK · WEB3 LEDGER ACTIVE
+          JUNEVERSE NETWORK · WEB3 LEDGER ACTIVE<br>
+          <span style="color:var(--green);font-size:10px">▸ PROXIMITY · WALL · FURNITURE DETECTION ENABLED</span>
         </div>
         <button id="btn-init">⬡ INITIALIZE SYSTEM</button>
         <div class="init-warning">
-          ⚠ Requires camera access + audio permissions.<br>
+          ⚠ Requires camera + audio permissions.<br>
           Wear earphones before proceeding.
         </div>
       </div>
@@ -402,28 +365,25 @@
 
     <!-- RIGHT PANEL -->
     <div id="right-panel">
-
-      <!-- token row -->
       <div id="token-row">
         <div class="token-card">
           <div class="token-label">$JNV Balance</div>
-          <div class="token-value cyan" id="jnv-balance">0.000</div>
+          <div class="token-value" id="jnv-balance" style="color:var(--cyan)">0.000</div>
         </div>
         <div class="token-card">
           <div class="token-label">Blocks Mined</div>
-          <div class="token-value green" id="block-count">0</div>
+          <div class="token-value" id="block-count" style="color:var(--green)">0</div>
         </div>
         <div class="token-card">
           <div class="token-label">Hazards Resolved</div>
-          <div class="token-value" id="hazard-count" style="color:#f59e0b">0</div>
+          <div class="token-value" id="hazard-count" style="color:var(--amber)">0</div>
         </div>
         <div class="token-card">
-          <div class="token-label">FPS · Latency</div>
+          <div class="token-label">Inference · FPS</div>
           <div class="token-value" id="perf-display" style="color:#a78bfa">— ms</div>
         </div>
       </div>
 
-      <!-- lane status -->
       <div id="lane-status">
         <div class="ls-cell">
           <div class="ls-label">Left Lane</div>
@@ -439,16 +399,13 @@
         </div>
       </div>
 
-      <!-- TERMINAL LOG -->
       <div id="terminal"></div>
 
-      <!-- status bar -->
       <div id="statusbar">
         <span>JUNEVERSE P2P MESH · ENCRYPTED</span>
         <span id="fps-counter">0 FPS</span>
         <span id="block-counter">BLOCK #0</span>
       </div>
-
     </div>
   </div>
 
@@ -462,11 +419,35 @@
 </div>
 
 <script>
-// ─────────────────────────────────────────────────────────────
-//  SONICLEDGER — CORE ENGINE
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  SONICLEDGER CORE ENGINE  v2.5.0
+//  FIXES: proximity detection, wall inference, low-score objects,
+//         offscreen canvas for inference (no lag), no double-scale
+// ═══════════════════════════════════════════════════════════════
 
 const $ = id => document.getElementById(id);
+
+// ── CONFIG ────────────────────────────────────────────────────
+const CFG = {
+  // Low threshold: catch tables, chairs, walls, clutter (was 0.45 — missed everything)
+  SCORE_MIN: 0.20,
+
+  // Offscreen canvas size for TF inference — small = fast, ~4x speedup vs full res
+  INFER_W: 320,
+  INFER_H: 240,
+
+  // Speech throttle — min ms between voice alerts
+  SPEAK_THROTTLE: 4500,
+
+  // A box covering this fraction of frame WIDTH is treated as "wall/surface ahead"
+  WALL_WIDTH_RATIO: 0.55,
+
+  // A box taller than this fraction of frame HEIGHT = very close object
+  CLOSE_HEIGHT_RATIO: 0.50,
+
+  // Center hazard triggers voice; side-only triggers advisory
+  SIDE_ADVISORY_THROTTLE: 8000,
+};
 
 // ── STATE ─────────────────────────────────────────────────────
 let model = null;
@@ -474,92 +455,102 @@ let synth = window.speechSynthesis;
 let selectedVoice = null;
 let initialized = false;
 let detecting = false;
+let loopRunning = false;
 
 let lastSpeakTime = 0;
-const SPEAK_THROTTLE = 4500; // ms
+let lastSideAdvisoryTime = 0;
 
+// FPS tracking
 let frameCount = 0;
 let lastFpsTime = performance.now();
+let currentFps = 0;
 let inferenceMs = 0;
 
-// Web3 ledger state
+// Ledger
 let blockCount = 0;
 let jnvBalance = 0;
 let hazardCount = 0;
-let walletAddress = '0x' + [...Array(40)].map(()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
 let txNonce = Math.floor(Math.random() * 9000) + 1000;
+let walletAddress = '0x' + [...Array(40)].map(()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
 
-// Lane state
-let laneState = { left: 'CLEAR', center: 'CLEAR', right: 'CLEAR' };
+// Canvas refs (set after DOM ready)
+let displayCanvas, displayCtx;
+// Offscreen canvas for fast TF inference
+let inferCanvas, inferCtx;
+// Cached canvas dimensions (updated on resize only)
+let canvasW = 0, canvasH = 0;
 
-// Hazard classes from COCO-SSD to flag
+// ── ALL OBJECTS COCO-SSD KNOWS (80 classes) ───────────────────
+// Mark which ones are hazards for the blind
 const HAZARD_CLASSES = new Set([
-  'person','car','truck','bus','motorcycle','bicycle','scooter',
-  'chair','bench','potted plant','traffic light','stop sign',
-  'parking meter','fire hydrant','cat','dog','backpack','suitcase',
-  'umbrella','handbag','tie','bottle','bowl','couch','bed','dining table',
-  'toilet','tv','laptop','keyboard','mouse','remote','cell phone',
-  'book','clock','vase','scissors','teddy bear','hair drier','toothbrush'
+  // People & animals that move unpredictably
+  'person','cat','dog','horse','cow','elephant','bear','zebra','giraffe',
+  // Vehicles
+  'car','truck','bus','motorcycle','bicycle','boat','airplane','train',
+  // Indoor/outdoor obstacles — THIS is what was missing
+  'chair','couch','bed','dining table','bench','toilet','refrigerator',
+  'oven','microwave','sink','tv','laptop','keyboard','mouse',
+  'bottle','cup','bowl','wine glass','fork','knife','spoon',
+  'potted plant','vase','clock','book','scissors','teddy bear',
+  'backpack','umbrella','handbag','suitcase','tie',
+  'traffic light','fire hydrant','stop sign','parking meter',
+  'skateboard','surfboard','tennis racket','baseball bat',
+  'sports ball','kite','frisbee','snowboard','skis',
+  'cell phone','remote','toothbrush','hair drier',
+  // Construction / outdoor
+  'bench','fire hydrant',
 ]);
 
 // ── TERMINAL LOG ───────────────────────────────────────────────
-const terminal = $('terminal');
-const MAX_LOGS = 200;
-
+const MAX_LOGS = 180;
 function log(type, msg) {
-  const now = new Date();
-  const ts  = now.toTimeString().slice(0,8);
-  const tagMap   = { info:'INF', ok:'OK!', warn:'WRN', alert:'ALT', block:'BLK', token:'TKN' };
-  const classMap = { info:'msg-info', ok:'msg-ok', warn:'msg-warn', alert:'msg-alert', block:'msg-block', token:'msg-token' };
-
+  const terminal = $('terminal');
+  const ts = new Date().toTimeString().slice(0,8);
+  const tagMap = { info:'INF', ok:'OK!', warn:'WRN', alert:'ALT', block:'BLK', token:'TKN', close:'PRX' };
   const entry = document.createElement('div');
   entry.className = 'log-entry';
-  entry.innerHTML = `
-    <div class="log-ts">${ts}</div>
-    <div class="log-tag tag-${type}">${tagMap[type]||'SYS'}</div>
-    <div class="log-msg ${classMap[type]||''}">${msg}</div>
-  `;
+  entry.innerHTML =
+    `<div class="log-ts">${ts}</div>` +
+    `<div class="log-tag tag-${type}">${tagMap[type]||'SYS'}</div>` +
+    `<div class="log-msg msg-${type}">${msg}</div>`;
   terminal.appendChild(entry);
-
-  // trim old entries
   while (terminal.children.length > MAX_LOGS) terminal.removeChild(terminal.firstChild);
   terminal.scrollTop = terminal.scrollHeight;
 }
 
-// ── WALLET DISPLAY ─────────────────────────────────────────────
 $('wallet-addr').textContent = walletAddress.slice(0,6)+'…'+walletAddress.slice(-4);
 
 // ── VOICE ENGINE ───────────────────────────────────────────────
 function loadVoice() {
   const voices = synth.getVoices();
-  const preferred = ['Google US English','Samantha','Microsoft Zira Desktop - English (United States)','Karen','Moira'];
+  const preferred = [
+    'Google US English','Samantha','Karen','Moira','Tessa',
+    'Microsoft Zira Desktop - English (United States)',
+    'Microsoft Aria Online (Natural) - English (United States)'
+  ];
   for (const name of preferred) {
     const v = voices.find(v => v.name === name);
     if (v) { selectedVoice = v; break; }
   }
   if (!selectedVoice) {
-    selectedVoice = voices.find(v => v.lang && v.lang.startsWith('en') && v.gender === 'female')
+    selectedVoice = voices.find(v => v.lang && v.lang.startsWith('en') && /female|woman/i.test(v.name))
                  || voices.find(v => v.lang && v.lang.startsWith('en'))
                  || voices[0] || null;
   }
-  if (selectedVoice) log('ok', `Voice profile bound → ${selectedVoice.name}`);
 }
-
 if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoice;
 loadVoice();
 
 function speak(text, priority = false) {
   const now = performance.now();
-  if (!priority && (now - lastSpeakTime) < SPEAK_THROTTLE) return;
+  if (!priority && (now - lastSpeakTime) < CFG.SPEAK_THROTTLE) return false;
   lastSpeakTime = now;
-
-  synth.cancel();
+  synth.cancel(); // flush queue — prevents stutter/lag
   const utt = new SpeechSynthesisUtterance(text);
   if (selectedVoice) utt.voice = selectedVoice;
-  utt.rate  = 0.92;
-  utt.pitch = 1.05;
-  utt.volume= 1.0;
+  utt.rate = 0.9; utt.pitch = 1.05; utt.volume = 1.0;
   synth.speak(utt);
+  return true;
 }
 
 // ── WEB3 LEDGER ────────────────────────────────────────────────
@@ -568,18 +559,12 @@ function mineBlock(hazardLabel, lane, action) {
   txNonce++;
   const reward = parseFloat((Math.random() * 1.5 + 0.5).toFixed(3));
   jnvBalance   = parseFloat((jnvBalance + reward).toFixed(3));
-
-  // fake block hash
   const hash = '0x' + [...Array(16)].map(()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
-
-  $('block-count').textContent = blockCount;
-  $('jnv-balance').textContent = jnvBalance.toFixed(3);
+  $('block-count').textContent  = blockCount;
+  $('jnv-balance').textContent  = jnvBalance.toFixed(3);
   $('block-counter').textContent = `BLOCK #${blockCount}`;
-
-  log('block', `Block #${blockCount} mined · hash ${hash.slice(0,12)}…`);
-  log('token', `+${reward} $JNV rewarded · nonce ${txNonce} · bal ${jnvBalance.toFixed(3)}`);
-
-  // persist to localStorage (simulated ledger)
+  log('block', `Block #${blockCount} · ${hash.slice(0,14)}… · ${action}`);
+  log('token', `+${reward} $JNV · nonce ${txNonce} · bal ${jnvBalance.toFixed(3)}`);
   try {
     const ledger = JSON.parse(localStorage.getItem('sl_ledger') || '[]');
     ledger.push({ block: blockCount, hash, reward, hazardLabel, lane, action, ts: Date.now() });
@@ -588,229 +573,372 @@ function mineBlock(hazardLabel, lane, action) {
   } catch(e) {}
 }
 
-// ── LANE GEOMETRY ──────────────────────────────────────────────
-function getLaneForBox(x, w, canvasW) {
-  const cx = x + w / 2;
-  if (cx < canvasW * 0.333) return 'left';
-  if (cx < canvasW * 0.666) return 'center';
-  return 'right';
-}
-
-// ── LANE STATUS UI ─────────────────────────────────────────────
-function updateLaneUI(left, center, right) {
-  function setCell(el, state) {
-    el.className = 'ls-status ' + (state === 'CLEAR' ? 'clear' : state === 'IDLE' ? 'unknown' : 'hazard');
-    el.textContent = state;
-  }
-  setCell($('ls-left'),   left);
-  setCell($('ls-center'), center);
-  setCell($('ls-right'),  right);
+// ── CANVAS RESIZE (called once + on window resize) ────────────
+function resizeCanvas() {
+  const panel = displayCanvas.parentElement;
+  const w = panel.clientWidth;
+  const h = panel.clientHeight;
+  if (w === canvasW && h === canvasH) return; // skip if no change
+  canvasW = displayCanvas.width  = w;
+  canvasH = displayCanvas.height = h;
 }
 
 // ── CAMERA SETUP ───────────────────────────────────────────────
 async function startCamera() {
   const video = $('video');
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
+    // Try rear camera first (environment), fall back to any camera
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width:  { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30, min: 15 }
+        }, audio: false
+      });
+    } catch(e) {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
     video.srcObject = stream;
-    await new Promise(res => video.onloadedmetadata = res);
+    await new Promise(res => { video.onloadedmetadata = res; });
     await video.play();
     $('cam-badge').textContent = 'CAM LIVE';
     $('cam-badge').className   = 'badge badge-green';
-    log('ok', 'Camera stream acquired · ' + video.videoWidth + '×' + video.videoHeight);
+    log('ok', `Camera · ${video.videoWidth}×${video.videoHeight} · stream active`);
     return true;
   } catch(e) {
-    log('alert', 'Camera access denied: ' + e.message);
-    speak('Camera access denied. Please allow camera permissions.', true);
+    log('alert', 'Camera failed: ' + e.message);
     return false;
   }
 }
 
-// ── MODEL LOADING ──────────────────────────────────────────────
+// ── MODEL LOAD ─────────────────────────────────────────────────
 async function loadModel() {
-  log('info', 'Loading COCO-SSD object detection model…');
+  log('info', 'Loading COCO-SSD MobileNetV2…');
   try {
-    model = await cocoSsd.load({ base: 'mobilenet_v2' });
+    // Use lite_mobilenet_v2 for faster inference (lower latency)
+    model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
     $('model-badge').textContent = 'MODEL READY';
     $('model-badge').className   = 'badge badge-green';
-    log('ok', 'COCO-SSD MobileNetV2 loaded successfully.');
+    log('ok', 'COCO-SSD lite_mobilenet_v2 loaded · low-latency mode');
     return true;
   } catch(e) {
-    log('alert', 'Model load failed: ' + e.message);
-    return false;
+    log('warn', 'Lite model failed, trying mobilenet_v2…');
+    try {
+      model = await cocoSsd.load({ base: 'mobilenet_v2' });
+      $('model-badge').textContent = 'MODEL READY';
+      $('model-badge').className   = 'badge badge-green';
+      log('ok', 'COCO-SSD mobilenet_v2 loaded');
+      return true;
+    } catch(e2) {
+      log('alert', 'Model load failed: ' + e2.message);
+      return false;
+    }
   }
 }
 
-// ── DETECTION LOOP ─────────────────────────────────────────────
-const canvas = $('overlay-canvas');
-const ctx    = canvas.getContext('2d');
-
-function resizeCanvas() {
-  const panel = canvas.parentElement;
-  canvas.width  = panel.clientWidth;
-  canvas.height = panel.clientHeight;
+// ── LANE ASSIGNMENT (no double-scaling) ───────────────────────
+// Takes bbox in DISPLAY canvas coordinates (already scaled)
+function getLaneForBox(cx) {
+  // cx is the center x in canvas pixels
+  if (cx < canvasW * 0.333) return 'left';
+  if (cx < canvasW * 0.666) return 'center';
+  return 'right';
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
 
+// ── LANE STATUS UI ─────────────────────────────────────────────
+function updateLaneUI(l, c, r) {
+  function setCell(el, state) {
+    const isHazard = state !== 'CLEAR' && state !== 'IDLE';
+    const isClose  = isHazard && state.startsWith('⚠');
+    el.className = 'ls-status ' + (state === 'IDLE' ? 'unknown' : isClose ? 'close' : isHazard ? 'hazard' : 'clear');
+    el.textContent = state;
+  }
+  setCell($('ls-left'),   l);
+  setCell($('ls-center'), c);
+  setCell($('ls-right'),  r);
+}
+
+// ── PROXIMITY INDICATOR ────────────────────────────────────────
+function updateProximity(ratio) {
+  // ratio 0 = far, 1 = very close (fills bar)
+  const pct = Math.min(100, Math.round(ratio * 100));
+  const fill = $('prox-fill-inner');
+  fill.style.width = pct + '%';
+  fill.style.background = pct > 70 ? 'var(--red)' : pct > 40 ? 'var(--amber)' : 'var(--green)';
+  $('prox-label').textContent = pct > 70 ? 'VERY CLOSE' : pct > 40 ? 'CLOSE' : pct > 10 ? 'NEAR' : 'FAR';
+}
+
+// ── WALL / SURFACE DETECTION ───────────────────────────────────
+// COCO-SSD has no "wall" class. We infer walls/floors/surfaces
+// from very large bounding boxes that span most of the frame.
+function detectWallSurface(predictions, scaleX, scaleY) {
+  // Check if any detection spans a huge width (wall/furniture surface)
+  for (const p of predictions) {
+    const [bx, by, bw, bh] = p.bbox;
+    const displayW = bw * scaleX;
+    const displayH = bh * scaleY;
+    if (displayW / canvasW > CFG.WALL_WIDTH_RATIO) {
+      return { detected: true, label: p.class, score: p.score };
+    }
+  }
+
+  // Also check if total coverage of center column is very high
+  const centerCoverage = predictions.reduce((acc, p) => {
+    if (p.score < 0.18) return acc;
+    const [bx, by, bw, bh] = p.bbox;
+    const cx = (bx + bw/2) * scaleX;
+    if (cx > canvasW * 0.25 && cx < canvasW * 0.75) {
+      acc += (bh * scaleY) / canvasH;
+    }
+    return acc;
+  }, 0);
+
+  return { detected: false, coverage: centerCoverage };
+}
+
+// ── MAIN DETECTION LOOP ────────────────────────────────────────
 const hud       = $('status-hud');
 const statusTxt = $('status-text');
 
 async function detectionLoop() {
   if (!detecting || !model) return;
+  loopRunning = true;
 
   const video = $('video');
-  if (video.readyState < 2) { setTimeout(detectionLoop, 100); return; }
+  if (!video.videoWidth || video.readyState < 2) {
+    requestAnimationFrame(detectionLoop);
+    return;
+  }
 
-  resizeCanvas();
-  const W = canvas.width, H = canvas.height;
+  // ── 1. DRAW FRAME TO SMALL OFFSCREEN CANVAS FOR INFERENCE ──
+  // This is the key lag fix: run TF on 320×240, not 1280×720
+  inferCtx.drawImage(video, 0, 0, CFG.INFER_W, CFG.INFER_H);
 
   const t0 = performance.now();
   let predictions;
   try {
-    predictions = await model.detect(video);
+    // Detect on the small canvas — much faster
+    predictions = await model.detect(inferCanvas);
   } catch(e) {
-    setTimeout(detectionLoop, 150);
+    setTimeout(() => requestAnimationFrame(detectionLoop), 50);
     return;
   }
   inferenceMs = Math.round(performance.now() - t0);
 
-  // FPS counter
+  // ── 2. FPS ──
   frameCount++;
   const now = performance.now();
   if (now - lastFpsTime >= 1000) {
-    const fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
-    $('fps-counter').textContent = fps + ' FPS';
-    $('perf-display').textContent = inferenceMs + ' ms';
+    currentFps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+    $('fps-counter').textContent  = currentFps + ' FPS';
+    $('perf-display').textContent = inferenceMs + ' ms · ' + currentFps + 'fps';
     frameCount = 0; lastFpsTime = now;
   }
 
-  // ── DRAW ──
-  ctx.clearRect(0, 0, W, H);
+  // ── 3. SCALE FACTORS: infer canvas → display canvas ──
+  // The model gave us coordinates in CFG.INFER_W × CFG.INFER_H space
+  // We need to map them to the display canvas (canvasW × canvasH)
+  resizeCanvas();
+  const scaleX = canvasW / CFG.INFER_W;
+  const scaleY = canvasH / CFG.INFER_H;
 
-  // lane fill zones (subtle tint)
-  ctx.fillStyle = 'rgba(6,182,212,0.03)';
-  ctx.fillRect(0, 0, W/3, H);
-  ctx.fillRect(W*2/3, 0, W/3, H);
+  // ── 4. DRAW ON DISPLAY CANVAS ──
+  displayCtx.clearRect(0, 0, canvasW, canvasH);
+
+  // Lane zone tints
+  displayCtx.fillStyle = 'rgba(6,182,212,0.028)';
+  displayCtx.fillRect(0, 0, canvasW/3, canvasH);
+  displayCtx.fillRect(canvasW*2/3, 0, canvasW/3, canvasH);
 
   let leftHazard = false, centerHazard = false, rightHazard = false;
+  let centerCloseHazard = false;
   const newState = { left: 'CLEAR', center: 'CLEAR', right: 'CLEAR' };
+  let maxProximityRatio = 0;
 
-  // mirror transform (match video scaleX(-1))
-  ctx.save();
-  ctx.translate(W, 0);
-  ctx.scale(-1, 1);
-
-  // scale factor video → canvas
-  const scaleX = W / video.videoWidth;
-  const scaleY = H / video.videoHeight;
+  // Mirror transform (video is CSS mirrored, canvas must match)
+  displayCtx.save();
+  displayCtx.translate(canvasW, 0);
+  displayCtx.scale(-1, 1);
 
   for (const pred of predictions) {
-    if (pred.score < 0.45) continue;
+    // ── SCORE THRESHOLD: 0.20 catches tables, chairs, furniture ──
+    if (pred.score < CFG.SCORE_MIN) continue;
+
     const [bx, by, bw, bh] = pred.bbox;
-    const x = bx * scaleX, y = by * scaleY,
-          w = bw * scaleX, h = bh * scaleY;
+
+    // Map from inference space to display space
+    const x = bx * scaleX;
+    const y = by * scaleY;
+    const w = bw * scaleX;
+    const h = bh * scaleY;
+
+    // Center of box in display space
+    const cx = x + w / 2;
+    const cy = y + h / 2;
 
     const isHazard = HAZARD_CLASSES.has(pred.class);
-    const lane     = getLaneForBox(bx * scaleX, bw * scaleX, W);
+    const lane     = getLaneForBox(cx); // pass display-space cx — no double scale
 
-    // color
-    const color = isHazard
-      ? (lane === 'center' ? '#ef4444' : '#f59e0b')
-      : '#10b981';
+    // Proximity: how tall is this box relative to the canvas?
+    const proximityRatio = h / canvasH;
+    if (proximityRatio > maxProximityRatio) maxProximityRatio = proximityRatio;
 
-    // box
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = 2;
-    ctx.strokeRect(x, y, w, h);
+    // Is it very close? (box takes up more than 50% of frame height)
+    const isClose = proximityRatio > CFG.CLOSE_HEIGHT_RATIO;
 
-    // label background
-    const label = `${pred.class} ${Math.round(pred.score * 100)}%`;
-    ctx.font = 'bold 11px Space Mono, monospace';
-    const tw = ctx.measureText(label).width;
-    ctx.fillStyle = color + 'cc';
-    ctx.fillRect(x, y - 18, tw + 10, 18);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(label, x + 5, y - 5);
+    // Color by severity
+    let color;
+    if (!isHazard)          color = '#10b981'; // safe/non-hazard: green
+    else if (isClose)       color = '#ef4444'; // hazard very close: red
+    else if (lane==='center') color = '#f97316'; // hazard in center: orange
+    else                    color = '#f59e0b'; // hazard on side: amber
 
-    // lane tracking
+    // Draw bounding box
+    displayCtx.strokeStyle = color;
+    displayCtx.lineWidth   = isClose ? 3 : 2;
+    if (isClose) {
+      // Pulsing thick border for close objects
+      displayCtx.setLineDash([6, 3]);
+    } else {
+      displayCtx.setLineDash([]);
+    }
+    displayCtx.strokeRect(x, y, w, h);
+    displayCtx.setLineDash([]);
+
+    // Label pill
+    const confPct = Math.round(pred.score * 100);
+    const label   = `${pred.class} ${confPct}%${isClose ? ' ⚠CLOSE' : ''}`;
+    displayCtx.font = 'bold 11px "Space Mono", monospace';
+    const tw = displayCtx.measureText(label).width;
+    displayCtx.fillStyle = color + 'dd';
+    const lx = x, ly = y > 20 ? y - 18 : y + h + 2;
+    displayCtx.fillRect(lx, ly, tw + 10, 18);
+    displayCtx.fillStyle = '#fff';
+    displayCtx.fillText(label, lx + 5, ly + 13);
+
+    // Track lane hazards
     if (isHazard) {
-      if (lane === 'left')   { leftHazard  = true; newState.left   = pred.class.toUpperCase(); }
-      if (lane === 'center') { centerHazard= true; newState.center = pred.class.toUpperCase(); }
-      if (lane === 'right')  { rightHazard = true; newState.right  = pred.class.toUpperCase(); }
+      const label = isClose ? '⚠'+pred.class.toUpperCase() : pred.class.toUpperCase();
+      if (lane === 'left')   { leftHazard   = true; newState.left   = label; }
+      if (lane === 'center') {
+        centerHazard = true;
+        newState.center = label;
+        if (isClose) centerCloseHazard = true;
+      }
+      if (lane === 'right')  { rightHazard  = true; newState.right  = label; }
     }
   }
-  ctx.restore();
 
-  // ── UPDATE UI ──
+  displayCtx.restore();
+
+  // ── 5. WALL/SURFACE INFERENCE ──
+  const wallInfo = detectWallSurface(predictions, scaleX, scaleY);
+  if (wallInfo.detected && !centerHazard) {
+    // Large surface covering center — treat as obstacle
+    centerHazard = true;
+    newState.center = 'SURFACE/WALL';
+    log('warn', `Large surface detected (${wallInfo.label}) — wall/furniture ahead`);
+  }
+
+  // ── 6. PROXIMITY UI ──
+  updateProximity(maxProximityRatio);
+
+  // ── 7. UPDATE LANE STATUS UI ──
   updateLaneUI(newState.left, newState.center, newState.right);
 
-  // ── NAVIGATION LOGIC ──
+  // ── 8. NAVIGATION VOICE LOGIC ──
+  const humanName = newState.center.replace('⚠','').toLowerCase();
+
   if (centerHazard) {
-    hud.className = 'warning';
-    if (leftHazard && rightHazard) {
-      statusTxt.textContent = '⚠ ALL LANES BLOCKED — STOP';
-      speak('Warning. All lanes blocked. Please stop and wait.');
-      log('alert', `All lanes blocked · ${newState.left} | ${newState.center} | ${newState.right}`);
-      mineBlock(newState.center, 'all', 'STOP');
-      hazardCount++;
-    } else if (!leftHazard && rightHazard) {
-      statusTxt.textContent = '← VEER LEFT — CENTER BLOCKED';
-      speak(`Obstacle in center path. ${newState.center} detected. Veer left, left lane is clear.`);
-      log('warn', `Center blocked: ${newState.center} · Route: LEFT`);
-      mineBlock(newState.center, 'center', 'VEER_LEFT');
-      hazardCount++;
-    } else if (leftHazard && !rightHazard) {
-      statusTxt.textContent = 'VEER RIGHT → — CENTER BLOCKED';
-      speak(`Obstacle in center path. ${newState.center} detected. Veer right, right lane is clear.`);
-      log('warn', `Center blocked: ${newState.center} · Route: RIGHT`);
-      mineBlock(newState.center, 'center', 'VEER_RIGHT');
-      hazardCount++;
+    const urgency = centerCloseHazard ? 'warning' : 'warning';
+    hud.className = urgency;
+
+    if (centerCloseHazard) {
+      // Very close — most urgent
+      if (leftHazard && rightHazard) {
+        statusTxt.textContent = '⚠ STOP — OBSTACLE VERY CLOSE, ALL LANES BLOCKED';
+        if (speak(`Stop immediately. ${humanName} directly ahead and very close. All lanes are blocked.`)) {
+          log('alert', `STOP · ${humanName} VERY CLOSE · all lanes blocked`);
+          mineBlock(humanName, 'all', 'EMERGENCY_STOP'); hazardCount++;
+        }
+      } else if (!leftHazard) {
+        statusTxt.textContent = `⚠ ${humanName.toUpperCase()} VERY CLOSE — GO LEFT`;
+        if (speak(`Caution! ${humanName} very close ahead. Move left now.`)) {
+          log('alert', `CLOSE HAZARD · ${humanName} · route LEFT`);
+          mineBlock(humanName, 'center', 'EMERGENCY_LEFT'); hazardCount++;
+        }
+      } else {
+        statusTxt.textContent = `⚠ ${humanName.toUpperCase()} VERY CLOSE — GO RIGHT`;
+        if (speak(`Caution! ${humanName} very close ahead. Move right now.`)) {
+          log('alert', `CLOSE HAZARD · ${humanName} · route RIGHT`);
+          mineBlock(humanName, 'center', 'EMERGENCY_RIGHT'); hazardCount++;
+        }
+      }
     } else {
-      // both sides clear — split path
-      statusTxt.textContent = '⬡ PATH SPLIT — LEFT OR RIGHT';
-      speak(`Center path blocked by ${newState.center}. Both left and right lanes are open. You may go left or right.`);
-      log('warn', `Center blocked: ${newState.center} · Split path available`);
-      mineBlock(newState.center, 'center', 'PATH_SPLIT');
-      hazardCount++;
+      // Normal center hazard
+      if (leftHazard && rightHazard) {
+        statusTxt.textContent = '⛔ ALL LANES BLOCKED — STOP';
+        if (speak(`Warning. ${humanName} blocking your path. All lanes are blocked. Please stop.`)) {
+          log('alert', `ALL BLOCKED · ${newState.left}|${newState.center}|${newState.right}`);
+          mineBlock(humanName, 'all', 'STOP'); hazardCount++;
+        }
+      } else if (!leftHazard && rightHazard) {
+        statusTxt.textContent = `← GO LEFT — ${humanName.toUpperCase()} IN CENTER`;
+        if (speak(`${humanName} ahead in your path. Veer left. Left lane is clear.`)) {
+          log('warn', `Center: ${humanName} · Route: LEFT`);
+          mineBlock(humanName, 'center', 'VEER_LEFT'); hazardCount++;
+        }
+      } else if (leftHazard && !rightHazard) {
+        statusTxt.textContent = `GO RIGHT → — ${humanName.toUpperCase()} IN CENTER`;
+        if (speak(`${humanName} ahead in your path. Veer right. Right lane is clear.`)) {
+          log('warn', `Center: ${humanName} · Route: RIGHT`);
+          mineBlock(humanName, 'center', 'VEER_RIGHT'); hazardCount++;
+        }
+      } else {
+        statusTxt.textContent = `⬡ PATH SPLIT — ${humanName.toUpperCase()} AHEAD`;
+        if (speak(`${humanName} blocking center path. Both left and right are open. Choose either side.`)) {
+          log('warn', `Center: ${humanName} · Split path available`);
+          mineBlock(humanName, 'center', 'PATH_SPLIT'); hazardCount++;
+        }
+      }
     }
     $('hazard-count').textContent = hazardCount;
-  } else if (!leftHazard && !centerHazard && !rightHazard) {
+
+  } else if (!leftHazard && !rightHazard) {
     hud.className = 'active';
-    statusTxt.textContent = '✓ PATH CLEAR — PROCEED';
-    // silence: only speak occasionally when clear
-    // (no speak here — per design: silence when clear)
+    statusTxt.textContent = '✓ PATH CLEAR — PROCEED SAFELY';
+    // Stay silent when clear — core SonicLedger design principle
+
   } else {
+    // Side hazards only, center is clear
     hud.className = 'active';
-    let msg = 'Center clear. ';
-    if (leftHazard)  msg += `Left lane: ${newState.left}. `;
-    if (rightHazard) msg += `Right lane: ${newState.right}. `;
-    statusTxt.textContent = '◈ SIDE HAZARDS DETECTED';
-    // Soft advisory, throttled
-    const sideNames = [leftHazard && newState.left, rightHazard && newState.right].filter(Boolean);
-    speak(`Advisory: ${sideNames.join(' and ')} detected on side lanes. Center path is clear.`);
-    if (leftHazard || rightHazard) {
-      log('info', `Side hazards: L=${newState.left} R=${newState.right} · Center clear`);
+    statusTxt.textContent = '◈ SIDE HAZARDS — CENTER CLEAR';
+    const now2 = performance.now();
+    if (now2 - lastSideAdvisoryTime > CFG.SIDE_ADVISORY_THROTTLE) {
+      lastSideAdvisoryTime = now2;
+      const sides = [];
+      if (leftHazard)  sides.push(`${newState.left.replace('⚠','')} on your left`);
+      if (rightHazard) sides.push(`${newState.right.replace('⚠','')} on your right`);
+      speak(`Advisory. ${sides.join(' and ')}. Center path is clear, continue forward.`);
+      log('info', `Side advisory: L=${newState.left} R=${newState.right} · center clear`);
     }
   }
 
-  // ── PATH SPLIT DETECTION (no center hazard but both sides open) ──
-  if (!leftHazard && !centerHazard && !rightHazard) {
-    // purely clear — log heartbeat occasionally
-  }
-
-  setTimeout(detectionLoop, 90); // ~11fps intentional throttle
+  // ── 9. SCHEDULE NEXT FRAME ──
+  // Use setTimeout inside rAF to yield to browser paint
+  // This prevents blocking the main thread and causing camera lag
+  setTimeout(() => requestAnimationFrame(detectionLoop), 30);
 }
 
-// ── INITIALIZATION HANDSHAKE ─────────────────────────────────
+// ── INIT BUTTON ────────────────────────────────────────────────
 $('btn-init').addEventListener('click', async () => {
   if (initialized) return;
   initialized = true;
 
-  // unlock audio by immediately cancelling + speaking — browser security handshake
+  // Unlock audio — MUST happen synchronously in click handler
   synth.cancel();
   const unlock = new SpeechSynthesisUtterance('Sonic Ledger system fully initialized.');
   if (selectedVoice) unlock.voice = selectedVoice;
@@ -819,54 +947,59 @@ $('btn-init').addEventListener('click', async () => {
 
   $('init-overlay').style.display = 'none';
 
+  // Setup canvases
+  displayCanvas = $('overlay-canvas');
+  displayCtx    = displayCanvas.getContext('2d');
+  inferCanvas   = document.createElement('canvas');
+  inferCanvas.width  = CFG.INFER_W;
+  inferCanvas.height = CFG.INFER_H;
+  inferCtx = inferCanvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
   log('info', '══════════════════════════════════════');
-  log('info', ' SONICLEDGER BOOT SEQUENCE INITIATED ');
+  log('info', ' SONICLEDGER v2.5.0 BOOT SEQUENCE    ');
   log('info', '══════════════════════════════════════');
   log('info', `Wallet: ${walletAddress}`);
-  log('info', `Network: JuneVerse Mesh P2P · TLS-E2E`);
-  log('ok',   'Audio system unlocked via user gesture handshake.');
-  log('info', `Voice profile: ${selectedVoice ? selectedVoice.name : 'default system voice'}`);
+  log('info', 'Network: JuneVerse Mesh P2P · TLS-E2E');
+  log('ok',   'Audio system unlocked via gesture handshake');
+  log('info', `Voice: ${selectedVoice ? selectedVoice.name : 'system default'}`);
+  log('info', `Infer canvas: ${CFG.INFER_W}×${CFG.INFER_H} (low-latency mode)`);
+  log('info', `Score threshold: ${CFG.SCORE_MIN} (catches furniture/clutter)`);
+  log('info', `Wall detection: spans >${Math.round(CFG.WALL_WIDTH_RATIO*100)}% frame width`);
 
-  // load model & camera in parallel
   const [camOk, modelOk] = await Promise.all([startCamera(), loadModel()]);
 
   if (!camOk || !modelOk) {
     log('alert', 'Initialization failed. Check permissions.');
-    speak('Initialization failed. Please check camera and reload.', true);
+    speak('Initialization failed. Please allow camera access and reload.', true);
     return;
   }
 
   log('ok', 'All systems nominal. Detection loop starting…');
-  log('block', 'Genesis block validated on JuneVerse chain.');
   mineBlock('genesis', 'system', 'BOOT');
 
   detecting = true;
-  speak('Navigation system active. I will alert you of any obstacles in your path. Walk safely.', true);
-  detectionLoop();
+  speak('Navigation system active. I will warn you of any obstacles in your path. Walk safely.', true);
+  requestAnimationFrame(detectionLoop);
 });
 
-// ── SIMULATED BACKGROUND LEDGER HEARTBEAT ────────────────────
+// ── BACKGROUND LEDGER HEARTBEAT ────────────────────────────────
 setInterval(() => {
   if (!detecting) return;
-  const syncTypes = ['PEER_SYNC','CHAIN_VALID','MEMPOOL_OK','ROUTE_CACHE','GPS_ANCHOR'];
-  const t = syncTypes[Math.floor(Math.random() * syncTypes.length)];
+  const types = ['PEER_SYNC','CHAIN_VALID','MEMPOOL_OK','ROUTE_CACHE','GPS_ANCHOR','MESH_PING'];
+  const t    = types[Math.floor(Math.random() * types.length)];
   const peer = '0x' + [...Array(8)].map(()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
-  log('info', `${t} · peer ${peer} · latency ${Math.round(Math.random()*30+5)}ms`);
-}, 7000);
+  log('info', `${t} · peer ${peer} · ${Math.round(Math.random()*28+4)}ms`);
+}, 8000);
 
-// reload voices on page focus
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) loadVoice();
-});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadVoice(); });
 
 // ── BOOT LOG ──────────────────────────────────────────────────
-log('info', 'SonicLedger OS v2.4.1 · JuneVerse Labs');
+log('info', 'SonicLedger OS v2.5.0 · JuneVerse Labs');
 log('info', 'Awaiting user initialization handshake…');
-log('info', `TF.js ${tf ? tf.version.tfjs : 'loading'}  ·  COCO-SSD MobileNetV2`);
 log('info', 'Web Speech API: ' + (window.speechSynthesis ? 'AVAILABLE' : 'UNAVAILABLE'));
-log('info', 'localStorage ledger: ' + (() => { try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return 'OK'; } catch(e) { return 'BLOCKED'; } })());
+log('info', 'localStorage: ' + (() => { try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return 'OK'; } catch(e) { return 'BLOCKED'; } })());
 </script>
 </body>
 </html>
-
-          
