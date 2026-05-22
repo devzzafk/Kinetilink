@@ -1,2712 +1,398 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SonicLedger · JuneVerse Spatial Navigation</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-
-  <style>
-    /* ─────────────────────────────────────────────
-       DESIGN TOKENS & RESET
-    ───────────────────────────────────────────── */
-    :root {
-      --bg-void:       #060A12;
-      --bg-deep:       #0B0F19;
-      --bg-panel:      #0E1420;
-      --bg-surface:    #131926;
-      --bg-elevated:   #1A2235;
-      --accent-em:     #10B981;
-      --accent-em-dim: #0D9268;
-      --accent-teal:   #06B6D4;
-      --accent-warn:   #F59E0B;
-      --accent-danger: #EF4444;
-      --text-primary:  #E2E8F0;
-      --text-secondary:#94A3B8;
-      --text-muted:    #475569;
-      --text-accent:   #10B981;
-      --border-subtle: rgba(16,185,129,0.12);
-      --border-glow:   rgba(16,185,129,0.35);
-      --glow-em:       0 0 20px rgba(16,185,129,0.4);
-      --glow-em-sm:    0 0 8px  rgba(16,185,129,0.3);
-      --glow-teal:     0 0 16px rgba(6,182,212,0.4);
-      --font-mono:     'Share Tech Mono', monospace;
-      --font-display:  'Orbitron', monospace;
-      --font-body:     'DM Sans', sans-serif;
-      --radius-sm:     4px;
-      --radius-md:     8px;
-      --radius-lg:     12px;
-      --transition:    0.2s ease;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--bg-void);
-      color: var(--text-primary);
-      font-family: var(--font-body);
-      font-size: 14px;
-      line-height: 1.6;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* Ambient background grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(16,185,129,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(16,185,129,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Radial ambient glow */
-    body::after {
-      content: '';
-      position: fixed;
-      top: -20%;
-      left: -10%;
-      width: 60%;
-      height: 60%;
-      background: radial-gradient(ellipse, rgba(16,185,129,0.06) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ─────────────────────────────────────────────
-       HEADER / NAVBAR
-    ───────────────────────────────────────────── */
-    #app-header {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 28px;
-      border-bottom: 1px solid var(--border-subtle);
-      background: rgba(11,15,25,0.92);
-      backdrop-filter: blur(12px);
-    }
-
-    .brand-lockup {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-md);
-      background: linear-gradient(135deg, #10B981, #06B6D4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: var(--glow-em-sm);
-      flex-shrink: 0;
-    }
-
-    .brand-icon svg { width: 20px; height: 20px; }
-
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.1;
-    }
-
-    .brand-name {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--text-primary);
-    }
-
-    .brand-sub {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      color: var(--text-accent);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-    }
-
-    .header-status {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-secondary);
-      letter-spacing: 0.1em;
-    }
-
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      transition: background var(--transition), box-shadow var(--transition);
-    }
-
-    .status-dot.active {
-      background: var(--accent-em);
-      box-shadow: 0 0 6px var(--accent-em);
-      animation: pulse-dot 2s infinite;
-    }
-
-    .status-dot.warn {
-      background: var(--accent-warn);
-      box-shadow: 0 0 6px var(--accent-warn);
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .network-badge {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 0.15em;
-      color: var(--accent-em);
-      background: rgba(16,185,129,0.1);
-      border: 1px solid var(--border-glow);
-      padding: 3px 8px;
-      border-radius: var(--radius-sm);
-      text-transform: uppercase;
-    }
-
-    /* ─────────────────────────────────────────────
-       MAIN LAYOUT — SPLIT SCREEN
-    ───────────────────────────────────────────── */
-    #main-grid {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
-      height: calc(100vh - 69px);
-    }
-
-    /* ─────────────────────────────────────────────
-       PANEL BASE STYLES
-    ───────────────────────────────────────────── */
-    .panel {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--bg-panel);
-    }
-
-    .panel:first-child {
-      border-right: 1px solid var(--border-subtle);
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border-subtle);
-      background: rgba(14,20,32,0.8);
-      flex-shrink: 0;
-    }
-
-    .panel-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .panel-title-icon {
-      width: 22px;
-      height: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent-em);
-    }
-
-    .panel-title-text {
-      font-family: var(--font-display);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--text-primary);
-    }
-
-    .panel-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .chip {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 0.1em;
-      padding: 2px 7px;
-      border-radius: 2px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-secondary);
-      text-transform: uppercase;
-    }
-
-    .chip.live {
-      color: var(--accent-em);
-      border-color: var(--border-glow);
-      background: rgba(16,185,129,0.07);
-    }
-
-    /* ─────────────────────────────────────────────
-       LEFT PANEL — PERCEPTION CORE
-    ───────────────────────────────────────────── */
-    #perception-core { }
-
-    .camera-viewport {
-      position: relative;
-      flex: 1;
-      background: #020408;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #webcam-video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    #detection-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    /* Idle overlay */
-    #camera-idle-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      background: radial-gradient(ellipse at center, rgba(16,185,129,0.04) 0%, rgba(6,10,18,0.95) 70%);
-      z-index: 5;
-      transition: opacity 0.6s ease;
-    }
-
-    #camera-idle-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .idle-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      border: 1px solid var(--border-glow);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent-em);
-      position: relative;
-      animation: idle-ring 3s ease-in-out infinite;
-    }
-
-    .idle-icon::before, .idle-icon::after {
-      content: '';
-      position: absolute;
-      border-radius: 50%;
-      border: 1px solid rgba(16,185,129,0.2);
-      animation: ring-expand 3s ease-out infinite;
-    }
-
-    .idle-icon::before { width: 100px; height: 100px; animation-delay: 0s; }
-    .idle-icon::after  { width: 130px; height: 130px; animation-delay: 1s; }
-
-    @keyframes ring-expand {
-      0%   { transform: scale(0.85); opacity: 0.6; }
-      100% { transform: scale(1.2);  opacity: 0; }
-    }
-
-    @keyframes idle-ring {
-      0%, 100% { box-shadow: 0 0 10px rgba(16,185,129,0.2); }
-      50%       { box-shadow: var(--glow-em); }
-    }
-
-    .idle-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 0.2em;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      text-align: center;
-    }
-
-    /* Corner brackets on viewport */
-    .corner-bracket {
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      z-index: 4;
-      pointer-events: none;
-    }
-
-    .corner-bracket.tl { top: 10px; left: 10px; border-top: 2px solid var(--accent-em); border-left: 2px solid var(--accent-em); }
-    .corner-bracket.tr { top: 10px; right: 10px; border-top: 2px solid var(--accent-em); border-right: 2px solid var(--accent-em); }
-    .corner-bracket.bl { bottom: 10px; left: 10px; border-bottom: 2px solid var(--accent-em); border-left: 2px solid var(--accent-em); }
-    .corner-bracket.br { bottom: 10px; right: 10px; border-bottom: 2px solid var(--accent-em); border-right: 2px solid var(--accent-em); }
-
-    /* Scan line animation */
-    #scan-line {
-      position: absolute;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(16,185,129,0.6), transparent);
-      z-index: 4;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    #scan-line.scanning {
-      opacity: 1;
-      animation: scan-sweep 2.4s linear infinite;
-    }
-
-    @keyframes scan-sweep {
-      0%   { top: 0%; }
-      100% { top: 100%; }
-    }
-
-    /* Model loading overlay */
-    #model-loading-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(6,10,18,0.88);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      z-index: 8;
-      backdrop-filter: blur(4px);
-      display: none;
-    }
-
-    #model-loading-overlay.visible { display: flex; }
-
-    .loader-bar-wrap {
-      width: 220px;
-      height: 3px;
-      background: var(--bg-elevated);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .loader-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-em), var(--accent-teal));
-      width: 0%;
-      transition: width 0.3s ease;
-      box-shadow: var(--glow-em-sm);
-    }
-
-    .loader-text {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      color: var(--accent-em);
-    }
-
-    /* Detected object labels */
-    .detection-label-container {
-      position: absolute;
-      bottom: 60px;
-      left: 12px;
-      right: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      z-index: 4;
-      pointer-events: none;
-    }
-
-    .det-label {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      padding: 2px 6px;
-      border-radius: 2px;
-      border: 1px solid var(--accent-em);
-      background: rgba(16,185,129,0.12);
-      color: var(--accent-em);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      animation: label-in 0.25s ease;
-    }
-
-    @keyframes label-in {
-      from { opacity: 0; transform: translateY(4px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Scanner controls */
-    .scanner-controls {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      background: var(--bg-panel);
-      border-top: 1px solid var(--border-subtle);
-    }
-
-    /* Spatial audio indicator */
-    .spatial-bar {
-      flex: 1;
-      height: 28px;
-      background: var(--bg-elevated);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-    }
-
-    .spatial-bar-label {
-      position: absolute;
-      font-family: var(--font-mono);
-      font-size: 8px;
-      letter-spacing: 0.12em;
-      color: var(--text-muted);
-      z-index: 2;
-      padding: 0 6px;
-      user-select: none;
-    }
-
-    .spatial-bar-label.left  { left: 0; }
-    .spatial-bar-label.right { right: 0; }
-
-    #spatial-indicator {
-      position: absolute;
-      width: 6px;
-      height: 18px;
-      background: var(--accent-em);
-      border-radius: 2px;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: var(--glow-em-sm);
-      transition: left 0.15s ease;
-    }
-
-    /* ─────────────────────────────────────────────
-       BUTTONS
-    ───────────────────────────────────────────── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      font-family: var(--font-display);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      padding: 9px 16px;
-      border-radius: var(--radius-sm);
-      border: none;
-      cursor: pointer;
-      transition: all var(--transition);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: var(--accent-em);
-      color: #050D0A;
-      box-shadow: var(--glow-em-sm);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: #0ED496;
-      box-shadow: var(--glow-em);
-      transform: translateY(-1px);
-    }
-
-    .btn-primary:active:not(:disabled) { transform: translateY(0); }
-
-    .btn-danger {
-      background: transparent;
-      color: var(--accent-danger);
-      border: 1px solid rgba(239,68,68,0.4);
-    }
-
-    .btn-danger:hover:not(:disabled) {
-      background: rgba(239,68,68,0.1);
-      border-color: var(--accent-danger);
-      box-shadow: 0 0 10px rgba(239,68,68,0.25);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid var(--border-subtle);
-    }
-
-    .btn-ghost:hover:not(:disabled) {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      border-color: var(--border-glow);
-    }
-
-    .btn-teal {
-      background: rgba(6,182,212,0.12);
-      color: var(--accent-teal);
-      border: 1px solid rgba(6,182,212,0.3);
-    }
-
-    .btn-teal:hover:not(:disabled) {
-      background: rgba(6,182,212,0.2);
-      box-shadow: var(--glow-teal);
-    }
-
-    .btn-warn {
-      background: rgba(245,158,11,0.12);
-      color: var(--accent-warn);
-      border: 1px solid rgba(245,158,11,0.3);
-    }
-
-    .btn-warn:hover:not(:disabled) {
-      background: rgba(245,158,11,0.2);
-      box-shadow: 0 0 12px rgba(245,158,11,0.3);
-    }
-
-    .btn svg { width: 12px; height: 12px; flex-shrink: 0; }
-
-    /* ─────────────────────────────────────────────
-       RIGHT PANEL — DECENTRALIZED NODE TERMINAL
-    ───────────────────────────────────────────── */
-    #node-terminal { }
-
-    /* Wallet section */
-    .wallet-section {
-      flex-shrink: 0;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .wallet-card {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .wallet-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent-em), var(--accent-teal), transparent);
-    }
-
-    .wallet-card-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .wallet-label {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-
-    .wallet-value {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-secondary);
-      word-break: break-all;
-      flex: 1;
-      text-align: right;
-    }
-
-    .wallet-balance {
-      font-family: var(--font-display);
-      font-size: 22px;
-      font-weight: 900;
-      color: var(--accent-em);
-      text-shadow: var(--glow-em-sm);
-      letter-spacing: 0.05em;
-    }
-
-    .balance-unit {
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--accent-em-dim);
-      margin-left: 4px;
-      letter-spacing: 0.1em;
-    }
-
-    .wallet-key-display {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      color: var(--text-muted);
-      background: var(--bg-surface);
-      padding: 6px 10px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-      word-break: break-all;
-      line-height: 1.5;
-      cursor: pointer;
-      transition: all var(--transition);
-    }
-
-    .wallet-key-display:hover {
-      border-color: var(--border-glow);
-      color: var(--text-secondary);
-    }
-
-    .wallet-key-display.highlight {
-      color: var(--accent-em);
-      border-color: var(--border-glow);
-      box-shadow: var(--glow-em-sm);
-    }
-
-    /* Metrics row */
-    .metrics-row {
-      flex-shrink: 0;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1px;
-      background: var(--border-subtle);
-      border-top: 1px solid var(--border-subtle);
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .metric-cell {
-      background: var(--bg-panel);
-      padding: 10px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .metric-label {
-      font-family: var(--font-mono);
-      font-size: 8px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-
-    .metric-value {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      color: var(--text-primary);
-      letter-spacing: 0.05em;
-    }
-
-    .metric-value.em    { color: var(--accent-em); }
-    .metric-value.teal  { color: var(--accent-teal); }
-    .metric-value.warn  { color: var(--accent-warn); }
-
-    /* Terminal log */
-    .terminal-log-wrap {
-      flex: 1;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .terminal-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 16px;
-      background: var(--bg-surface);
-      border-bottom: 1px solid var(--border-subtle);
-      flex-shrink: 0;
-    }
-
-    .terminal-toolbar-left {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .terminal-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-    }
-
-    .terminal-dot.red    { background: #EF4444; }
-    .terminal-dot.yellow { background: #F59E0B; }
-    .terminal-dot.green  { background: #10B981; }
-
-    .terminal-title {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 0.15em;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      margin-left: 8px;
-    }
-
-    #terminal-log {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 16px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      line-height: 1.8;
-      background: var(--bg-void);
-      color: var(--text-secondary);
-    }
-
-    #terminal-log::-webkit-scrollbar { width: 4px; }
-    #terminal-log::-webkit-scrollbar-track { background: transparent; }
-    #terminal-log::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
-
-    .log-line {
-      display: block;
-      animation: log-in 0.2s ease;
-    }
-
-    @keyframes log-in {
-      from { opacity: 0; transform: translateX(-6px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
-    .log-ts   { color: var(--text-muted); }
-    .log-tag  { padding: 0 4px; border-radius: 2px; font-size: 9px; letter-spacing: 0.1em; }
-    .log-sys  { color: var(--accent-em); background: rgba(16,185,129,0.08); }
-    .log-nav  { color: var(--accent-teal); background: rgba(6,182,212,0.08); }
-    .log-blk  { color: var(--accent-warn); background: rgba(245,158,11,0.08); }
-    .log-err  { color: var(--accent-danger); background: rgba(239,68,68,0.08); }
-    .log-info { color: var(--text-secondary); }
-    .log-msg  { color: var(--text-primary); }
-
-    /* Terminal action bar */
-    .terminal-actions {
-      flex-shrink: 0;
-      display: flex;
-      gap: 8px;
-      padding: 12px 16px;
-      border-top: 1px solid var(--border-subtle);
-      background: var(--bg-panel);
-      flex-wrap: wrap;
-    }
-
-    /* ─────────────────────────────────────────────
-       MINING PROGRESS MODAL
-    ───────────────────────────────────────────── */
-    #mining-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: rgba(6,10,18,0.85);
-      backdrop-filter: blur(6px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #mining-modal.visible { display: flex; }
-
-    .mining-card {
-      background: var(--bg-panel);
-      border: 1px solid var(--border-glow);
-      border-radius: var(--radius-lg);
-      padding: 32px 40px;
-      min-width: 360px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      box-shadow: var(--glow-em), 0 40px 80px rgba(0,0,0,0.6);
-      animation: modal-in 0.3s ease;
-    }
-
-    @keyframes modal-in {
-      from { opacity: 0; transform: scale(0.92) translateY(12px); }
-      to   { opacity: 1; transform: scale(1) translateY(0); }
-    }
-
-    .mining-title {
-      font-family: var(--font-display);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--accent-em);
-    }
-
-    .mining-hash-display {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--accent-em);
-      background: var(--bg-void);
-      padding: 10px 16px;
-      border-radius: var(--radius-sm);
-      width: 100%;
-      text-align: center;
-      letter-spacing: 0.08em;
-      word-break: break-all;
-      min-height: 40px;
-      border: 1px solid var(--border-glow);
-    }
-
-    .mining-progress-wrap {
-      width: 100%;
-      height: 4px;
-      background: var(--bg-elevated);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    #mining-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-em), var(--accent-teal));
-      width: 0%;
-      transition: width 0.1s linear;
-      box-shadow: var(--glow-em-sm);
-    }
-
-    .mining-status {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      color: var(--text-secondary);
-    }
-
-    /* ─────────────────────────────────────────────
-       NOTIFICATION TOAST
-    ───────────────────────────────────────────── */
-    #toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 200;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-    }
-
-    .toast {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      padding: 10px 16px;
-      border-radius: var(--radius-md);
-      border: 1px solid;
-      background: var(--bg-panel);
-      max-width: 320px;
-      pointer-events: auto;
-      animation: toast-in 0.3s ease, toast-out 0.3s ease 3.7s forwards;
-      backdrop-filter: blur(8px);
-    }
-
-    .toast.success {
-      color: var(--accent-em);
-      border-color: var(--border-glow);
-      box-shadow: var(--glow-em-sm);
-    }
-
-    .toast.error {
-      color: var(--accent-danger);
-      border-color: rgba(239,68,68,0.4);
-    }
-
-    .toast.info {
-      color: var(--accent-teal);
-      border-color: rgba(6,182,212,0.3);
-    }
-
-    @keyframes toast-in {
-      from { opacity: 0; transform: translateX(20px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
-    @keyframes toast-out {
-      from { opacity: 1; transform: translateX(0); }
-      to   { opacity: 0; transform: translateX(20px); }
-    }
-
-    /* ─────────────────────────────────────────────
-       RESPONSIVE — MOBILE STACKS
-    ───────────────────────────────────────────── */
-    @media (max-width: 900px) {
-      #main-grid {
-        grid-template-columns: 1fr;
-        height: auto;
-        min-height: calc(100vh - 69px);
-      }
-
-      .panel:first-child { border-right: none; border-bottom: 1px solid var(--border-subtle); }
-
-      .camera-viewport { min-height: 280px; }
-
-      #node-terminal { min-height: 500px; }
-    }
-
-    @media (max-width: 600px) {
-      #app-header { padding: 12px 16px; }
-      .header-status { gap: 10px; }
-      .network-badge { display: none; }
-      .wallet-section { padding: 12px 14px; }
-      #terminal-log { font-size: 10px; }
-      .mining-card { min-width: unset; width: 90vw; padding: 24px 20px; }
-    }
-
-    /* ─────────────────────────────────────────────
-       UTILITY
-    ───────────────────────────────────────────── */
-    .hidden { display: none !important; }
-    .sr-only {
-      position: absolute;
-      width: 1px; height: 1px;
-      padding: 0; margin: -1px;
-      overflow: hidden;
-      clip: rect(0,0,0,0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    /* Number counter animation */
-    @keyframes num-flash {
-      0%, 100% { color: var(--text-primary); }
-      50%       { color: var(--accent-em); text-shadow: var(--glow-em-sm); }
-    }
-
-    .flashing { animation: num-flash 0.5s ease; }
-
-    /* Scan status badge */
-    .scan-status {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 2px 7px;
-      border-radius: 2px;
-    }
-
-    .scan-status.idle    { color: var(--text-muted);   background: var(--bg-elevated);           border: 1px solid var(--border-subtle); }
-    .scan-status.running { color: var(--accent-em);    background: rgba(16,185,129,0.08);         border: 1px solid var(--border-glow); animation: pulse-dot 1.5s infinite; }
-    .scan-status.loading { color: var(--accent-warn);  background: rgba(245,158,11,0.08);         border: 1px solid rgba(245,158,11,0.3); }
-    .scan-status.error   { color: var(--accent-danger); background: rgba(239,68,68,0.08);         border: 1px solid rgba(239,68,68,0.3); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JuneVerse // SonicLedger Fixed Audio</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0d0f12;
+            --bg-panel: #14181f;
+            --accent-green: #10b981;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #242b35;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 { font-size: 1.8rem; letter-spacing: -0.05em; }
+        header h1 span { color: var(--accent-green); }
+        .tagline { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--text-muted); }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .viewfinder-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        .lane-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; pointer-events: none;
+            z-index: 10;
+        }
+
+        .lane {
+            flex: 1;
+            border-left: 1px dashed rgba(255, 255, 255, 0.1);
+            border-right: 1px dashed rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .lane::after {
+            content: attr(data-label);
+            position: absolute; bottom: 10px; left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Space Mono', monospace; font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3); text-transform: uppercase;
+        }
+
+        .lane.active-block {
+            background-color: rgba(239, 68, 68, 0.25);
+            border: 2px solid #ef4444;
+        }
+
+        .web3-metric-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .metric-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .metric-value { color: var(--accent-green); word-break: break-all; }
+
+        .terminal-box {
+            background-color: #080a0d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Space Mono', monospace; font-size: 0.85rem;
+            height: 250px; overflow-y: auto;
+            color: #34d399; flex-grow: 1;
+        }
+
+        .terminal-line { margin-bottom: 0.4rem; }
+        .terminal-timestamp { color: var(--text-muted); margin-right: 0.5rem; }
+
+        .btn {
+            background-color: var(--accent-green);
+            color: #000; border: none; padding: 0.8rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+            border-radius: 6px; cursor: pointer;
+            transition: all 0.2s ease; width: 100%; margin-top: 1rem;
+        }
+
+        .btn:disabled { background-color: #1e2530; color: var(--text-muted); cursor: not-allowed; }
+    </style>
 </head>
-
 <body>
-  <!-- ════════════════════════════════════════════
-       APP HEADER
-  ═══════════════════════════════════════════════ -->
-  <header id="app-header" role="banner">
-    <div class="brand-lockup">
-      <div class="brand-icon" aria-hidden="true">
-        <!-- Sound wave / eye hybrid icon -->
-        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="10" cy="10" r="3" fill="white"/>
-          <path d="M10 4 C10 4, 5 7 5 10 C5 13 10 16 10 16 C10 16 15 13 15 10 C15 7 10 4 10 4Z" stroke="white" stroke-width="1.2" fill="none" opacity="0.7"/>
-          <path d="M3 10 Q10 2 17 10" stroke="white" stroke-width="1" fill="none" opacity="0.4" stroke-dasharray="2 2"/>
-          <path d="M3 10 Q10 18 17 10" stroke="white" stroke-width="1" fill="none" opacity="0.4" stroke-dasharray="2 2"/>
-        </svg>
-      </div>
-      <div class="brand-text">
-        <span class="brand-name">SonicLedger</span>
-        <span class="brand-sub">JuneVerse · Spatial Nav v0.9.1</span>
-      </div>
-    </div>
 
-    <div class="header-status" role="status" aria-live="polite">
-      <div class="status-pill">
-        <div class="status-dot" id="camera-status-dot" aria-hidden="true"></div>
-        <span id="camera-status-label">CAMERA OFF</span>
-      </div>
-      <div class="status-pill">
-        <div class="status-dot" id="model-status-dot" aria-hidden="true"></div>
-        <span id="model-status-label">MODEL IDLE</span>
-      </div>
-      <div class="status-pill">
-        <div class="status-dot active" aria-hidden="true"></div>
-        <span>NODE CONNECTED</span>
-      </div>
-      <div class="network-badge" aria-label="Network: JuneVerse Testnet">JNV TESTNET</div>
-    </div>
-  </header>
-
-  <!-- ════════════════════════════════════════════
-       MAIN GRID
-  ═══════════════════════════════════════════════ -->
-  <main id="main-grid" role="main">
-
-    <!-- ─────────────────────────────────────
-         LEFT PANEL: PERCEPTION CORE
-    ──────────────────────────────────────── -->
-    <section class="panel" id="perception-core" aria-label="Perception Core - Camera and Object Detection">
-      <div class="panel-header">
-        <div class="panel-title">
-          <div class="panel-title-icon" aria-hidden="true">
-            <!-- Eye icon -->
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M1 9 C1 9 4 3 9 3 C14 3 17 9 17 9 C17 9 14 15 9 15 C4 15 1 9 1 9Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              <circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="9" cy="9" r="1" fill="currentColor"/>
-            </svg>
-          </div>
-          <span class="panel-title-text">Perception Core</span>
+    <header>
+        <div>
+            <h1>JuneVerse // <span>SonicLedger</span></h1>
+            <div class="tagline">RESEARCH • INNOVATE • TECHNOLOGY</div>
         </div>
-        <div class="panel-meta">
-          <span class="scan-status idle" id="scan-status-badge" role="status">IDLE</span>
-          <span class="chip" id="fps-chip">0 FPS</span>
-        </div>
-      </div>
+        <div class="tagline">AUDIO-FIXED WALKING ASSIST</div>
+    </header>
 
-      <!-- Camera viewport -->
-      <div class="camera-viewport" role="region" aria-label="Live camera feed with object detection overlay">
-        <!-- Corner decorators -->
-        <div class="corner-bracket tl" aria-hidden="true"></div>
-        <div class="corner-bracket tr" aria-hidden="true"></div>
-        <div class="corner-bracket bl" aria-hidden="true"></div>
-        <div class="corner-bracket br" aria-hidden="true"></div>
+    <main class="dashboard-grid">
+        <div class="panel">
+            <div class="panel-title">
+                LIVE PERCEPTION ENVIRONMENT
+                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• ENGINE ASLEEP</span>
+            </div>
+            
+            <div class="viewfinder-container">
+                <video id="webcam" autoplay playsinline muted></video>
+                <div class="lane-overlay">
+                    <div class="lane" id="lane-left" data-label="Left Lane"></div>
+                    <div class="lane" id="lane-center" data-label="Center Path"></div>
+                    <div class="lane" id="lane-right" data-label="Right Lane"></div>
+                </div>
+            </div>
 
-        <!-- Video + Canvas -->
-        <video id="webcam-video" autoplay muted playsinline aria-label="Webcam video feed"></video>
-        <canvas id="detection-canvas" role="img" aria-label="Object detection bounding boxes overlay"></canvas>
-
-        <!-- Scan line animation -->
-        <div id="scan-line" aria-hidden="true"></div>
-
-        <!-- Model loading overlay -->
-        <div id="model-loading-overlay" role="status" aria-live="polite" aria-label="Loading detection model">
-          <span class="loader-text" id="model-loader-text">INITIALIZING PERCEPTION ENGINE...</span>
-          <div class="loader-bar-wrap">
-            <div class="loader-bar-fill" id="model-loader-bar"></div>
-          </div>
-          <span class="loader-text" id="model-loader-pct" style="color: var(--text-muted);">0%</span>
+            <button class="btn" id="btn-start">ACTIVATE SYSTEM PERCEPTION</button>
         </div>
 
-        <!-- Idle overlay -->
-        <div id="camera-idle-overlay" role="presentation">
-          <div class="idle-icon" aria-hidden="true">
-            <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-              <path d="M2 15 Q15 3 28 15 Q15 27 2 15Z" stroke="#10B981" stroke-width="1.5" fill="none"/>
-              <circle cx="15" cy="15" r="5" stroke="#10B981" stroke-width="1.5" fill="none"/>
-              <circle cx="15" cy="15" r="2" fill="#10B981"/>
-            </svg>
-          </div>
-          <p class="idle-label">Awaiting Activation<br><span style="color:var(--text-muted);font-size:9px;letter-spacing:0.2em;">Press · Start Scanner · to begin</span></p>
+        <div class="panel">
+            <div class="panel-title">DECENTRALIZED SPACE ACCOUNTABILITY MATRIX</div>
+            
+            <div class="web3-metric-card">
+                <div class="metric-row">
+                    <span>Wallet Identity Node:</span>
+                    <span class="metric-value" id="wallet-addr">Uninitialized</span>
+                </div>
+                <div class="metric-row">
+                    <span>Validation Reward Balance:</span>
+                    <span class="metric-value" id="wallet-bal">0.00 JNV</span>
+                </div>
+                <div class="metric-row">
+                    <span>Active Decentralized Block:</span>
+                    <span class="metric-value" id="ledger-block">#749,210</span>
+                </div>
+            </div>
+
+            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ASSIST EVENT MONITOR LOG</div>
+            <div class="terminal-box" id="terminal">
+                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Ready to mount software arrays...</div>
+            </div>
         </div>
+    </main>
 
-        <!-- Detection labels strip -->
-        <div class="detection-label-container" id="detection-labels" aria-live="polite" aria-label="Detected objects"></div>
-      </div>
+    <script>
+        let web3;
+        let model;
+        let tokenBalance = 0.00;
+        let currentBlock = 749210;
+        
+        // Audio Synthesis Controller Reference Mapping
+        const synth = window.speechSynthesis;
+        let selectedVoice = null;
+        let lastSpokenTime = 0;
+        
+        const video = document.getElementById('webcam');
+        const terminal = document.getElementById('terminal');
+        const btnStart = document.getElementById('btn-start');
+        const statusBadge = document.getElementById('status-badge');
 
-      <!-- Scanner controls -->
-      <div class="scanner-controls" role="group" aria-label="Scanner controls">
-        <button class="btn btn-primary" id="btn-start-scanner" aria-label="Start spatial scanner">
-          <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <polygon points="2,1 10,6 2,11" fill="currentColor"/>
-          </svg>
-          Start Scanner
-        </button>
-        <button class="btn btn-danger" id="btn-stop-scanner" disabled aria-label="Stop spatial scanner">
-          <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="2" y="2" width="3" height="8" fill="currentColor"/>
-            <rect x="7" y="2" width="3" height="8" fill="currentColor"/>
-          </svg>
-          Stop Scanner
-        </button>
-        <!-- Spatial audio pan indicator -->
-        <div class="spatial-bar" role="meter" aria-label="Spatial audio pan position" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0">
-          <span class="spatial-bar-label left" aria-hidden="true">L</span>
-          <div id="spatial-indicator" aria-hidden="true"></div>
-          <span class="spatial-bar-label right" aria-hidden="true">R</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ─────────────────────────────────────
-         RIGHT PANEL: DECENTRALIZED NODE TERMINAL
-    ──────────────────────────────────────── -->
-    <section class="panel" id="node-terminal" aria-label="Decentralized Node Terminal">
-      <div class="panel-header">
-        <div class="panel-title">
-          <div class="panel-title-icon" aria-hidden="true">
-            <!-- Hex/chain icon -->
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="9,1 16,5 16,13 9,17 2,13 2,5" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              <circle cx="9" cy="9" r="2" stroke="currentColor" stroke-width="1.2"/>
-              <line x1="9" y1="7" x2="9" y2="1"   stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
-              <line x1="9" y1="11" x2="9" y2="17" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
-              <line x1="7.3" y1="8" x2="2" y2="5" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
-              <line x1="10.7" y1="10" x2="16" y2="13" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
-            </svg>
-          </div>
-          <span class="panel-title-text">Decentralized Node Terminal</span>
-        </div>
-        <div class="panel-meta">
-          <span class="chip live" id="node-sync-chip">SYNCED</span>
-          <span class="chip" id="peer-chip">3 PEERS</span>
-        </div>
-      </div>
-
-      <!-- Wallet section -->
-      <div class="wallet-section" role="region" aria-label="JNV Wallet">
-        <div class="wallet-card">
-          <div class="wallet-card-row">
-            <span class="wallet-label">Wallet Balance</span>
-            <span class="wallet-balance" id="wallet-balance-display" aria-live="polite">
-              0<span class="balance-unit">JNV</span>
-            </span>
-          </div>
-          <div class="wallet-card-row">
-            <span class="wallet-label">Public Address</span>
-          </div>
-          <div class="wallet-key-display" id="wallet-key-display"
-               role="textbox" aria-readonly="true" tabindex="0"
-               aria-label="Wallet public key - click to copy"
-               title="Click to copy address">
-            No wallet generated · click "Generate JNV Wallet"
-          </div>
-          <div class="wallet-card-row" style="gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary" id="btn-generate-wallet" aria-label="Generate new JNV wallet">
-              <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/>
-                <line x1="6" y1="3" x2="6" y2="9" stroke="currentColor" stroke-width="1.2"/>
-                <line x1="3" y1="6" x2="9" y2="6" stroke="currentColor" stroke-width="1.2"/>
-              </svg>
-              Generate JNV Wallet
-            </button>
-            <button class="btn btn-ghost" id="btn-export-wallet" disabled aria-label="Export wallet data">
-              <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <path d="M2 8 L2 10 L10 10 L10 8" stroke="currentColor" stroke-width="1.2"/>
-                <line x1="6" y1="2" x2="6" y2="8" stroke="currentColor" stroke-width="1.2"/>
-                <path d="M3.5 5.5 L6 8 L8.5 5.5" stroke="currentColor" stroke-width="1.2" fill="none"/>
-              </svg>
-              Export
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Live metrics row -->
-      <div class="metrics-row" role="group" aria-label="Live network metrics">
-        <div class="metric-cell">
-          <span class="metric-label">Block Height</span>
-          <span class="metric-value em" id="metric-block" aria-live="polite">#00000</span>
-        </div>
-        <div class="metric-cell">
-          <span class="metric-label">Wallet Balance</span>
-          <span class="metric-value teal" id="metric-balance" aria-live="polite">0 JNV</span>
-        </div>
-        <div class="metric-cell">
-          <span class="metric-label">Paths Verified</span>
-          <span class="metric-value warn" id="metric-paths" aria-live="polite">0</span>
-        </div>
-      </div>
-
-      <!-- Terminal log -->
-      <div class="terminal-log-wrap">
-        <div class="terminal-toolbar" role="presentation">
-          <div class="terminal-toolbar-left">
-            <div class="terminal-dot red"    aria-hidden="true"></div>
-            <div class="terminal-dot yellow" aria-hidden="true"></div>
-            <div class="terminal-dot green"  aria-hidden="true"></div>
-            <span class="terminal-title">node_terminal — jnv@sonicledger</span>
-          </div>
-          <button class="btn btn-ghost" id="btn-clear-log" style="padding:4px 8px;font-size:8px;" aria-label="Clear terminal log">CLEAR</button>
-        </div>
-        <div id="terminal-log" role="log" aria-live="polite" aria-label="Terminal activity log" tabindex="0"></div>
-      </div>
-
-      <!-- Terminal action buttons -->
-      <div class="terminal-actions" role="group" aria-label="Terminal actions">
-        <button class="btn btn-warn" id="btn-verify-path" disabled aria-label="Verify safe navigation path and mine block">
-          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M2 6 L5 9 L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          Verify Safe Path
-        </button>
-        <button class="btn btn-teal" id="btn-ping-node" aria-label="Ping decentralized node network">
-          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/>
-            <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="0.8" opacity="0.5" stroke-dasharray="1 1"/>
-          </svg>
-          Ping Node
-        </button>
-        <button class="btn btn-ghost" id="btn-sync-ledger" aria-label="Synchronize ledger with network">
-          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M2 6 A4 4 0 0 1 10 6" stroke="currentColor" stroke-width="1.2" fill="none"/>
-            <path d="M8.5 4.5 L10 6 L8.5 7.5" stroke="currentColor" stroke-width="1.2" fill="none"/>
-          </svg>
-          Sync Ledger
-        </button>
-      </div>
-    </section>
-  </main>
-
-  <!-- ════════════════════════════════════════════
-       MINING / BLOCK BROADCAST MODAL
-  ═══════════════════════════════════════════════ -->
-  <div id="mining-modal" role="dialog" aria-modal="true" aria-label="Mining and broadcasting block">
-    <div class="mining-card">
-      <p class="mining-title">⛏ Broadcasting Block</p>
-      <div class="mining-hash-display" id="mining-hash-display" aria-live="polite" aria-label="Mining hash">
-        Initializing...
-      </div>
-      <div class="mining-progress-wrap">
-        <div id="mining-progress-bar"></div>
-      </div>
-      <p class="mining-status" id="mining-status-text" aria-live="polite">Generating proof-of-path...</p>
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════════════
-       TOAST NOTIFICATIONS
-  ═══════════════════════════════════════════════ -->
-  <div id="toast-container" role="alert" aria-live="assertive" aria-atomic="true"></div>
-
-  <!-- ════════════════════════════════════════════
-       SCRIPTS — CDN DEPENDENCIES
-  ═══════════════════════════════════════════════ -->
-  <!-- Transformers.js for on-device object detection -->
-  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/dist/transformers.min.js"></script>
-  <!-- Web3.js for cryptographic wallet generation -->
-  <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
-
-  <!-- ════════════════════════════════════════════
-       SONICLEDGER APPLICATION CORE
-  ═══════════════════════════════════════════════ -->
-  <script>
-    /**
-     * SonicLedger — JuneVerse Spatial Navigation Engine
-     * ──────────────────────────────────────────────────
-     * Module architecture:
-     *  1. AppState         — Centralized reactive state
-     *  2. UIController     — DOM bindings & status updates
-     *  3. WalletModule     — Web3 key generation & localStorage persistence
-     *  4. LedgerModule     — Block simulation, mining animation, JNV rewards
-     *  5. AudioModule      — Web Audio API spatial sound engine (HRTF PannerNode)
-     *  6. PerceptionEngine — Transformers.js DETR model, webcam, detection loop
-     *  7. TerminalModule   — Log formatting & scrolling terminal
-     *  8. App.init         — Bootstrap & event wiring
-     */
-
-    /* ═══════════════════════════════════════════════════
-       1. APP STATE
-    ═══════════════════════════════════════════════════ */
-    const AppState = {
-      /* Camera & detection */
-      cameraActive: false,
-      scannerRunning: false,
-      modelLoaded: false,
-      modelLoading: false,
-      detectionLoopHandle: null,
-      lastFrameTime: 0,
-      frameCount: 0,
-      fpsUpdateHandle: null,
-
-      /* Wallet & ledger */
-      walletAddress: null,
-      walletPrivateKey: null,
-      balance: 0,
-      blockHeight: 0,
-      pathsVerified: 0,
-      isMining: false,
-
-      /* Audio */
-      audioContext: null,
-      audioReady: false,
-      activeSoundNodes: [],
-
-      /* Detected objects cache */
-      lastDetections: [],
-    };
-
-    /* ═══════════════════════════════════════════════════
-       2. UI CONTROLLER
-    ═══════════════════════════════════════════════════ */
-    const UIController = {
-      /* Cache DOM references */
-      els: {},
-
-      init() {
-        const ids = [
-          'webcam-video','detection-canvas','camera-idle-overlay',
-          'scan-line','model-loading-overlay','model-loader-text',
-          'model-loader-bar','model-loader-pct','detection-labels',
-          'btn-start-scanner','btn-stop-scanner','spatial-indicator',
-          'camera-status-dot','camera-status-label',
-          'model-status-dot','model-status-label',
-          'scan-status-badge','fps-chip',
-          'wallet-balance-display','wallet-key-display',
-          'btn-generate-wallet','btn-export-wallet',
-          'metric-block','metric-balance','metric-paths',
-          'terminal-log',
-          'btn-verify-path','btn-ping-node','btn-sync-ledger','btn-clear-log',
-          'mining-modal','mining-hash-display','mining-progress-bar','mining-status-text',
-          'toast-container','node-sync-chip','peer-chip',
-        ];
-        ids.forEach(id => {
-          this.els[id] = document.getElementById(id);
-        });
-      },
-
-      /** Update camera status indicator in header */
-      setCameraStatus(state) {
-        const dot   = this.els['camera-status-dot'];
-        const label = this.els['camera-status-label'];
-        switch (state) {
-          case 'active':
-            dot.className = 'status-dot active';
-            label.textContent = 'CAMERA LIVE';
-            break;
-          case 'error':
-            dot.className = 'status-dot warn';
-            label.textContent = 'CAMERA ERROR';
-            break;
-          default:
-            dot.className = 'status-dot';
-            label.textContent = 'CAMERA OFF';
+        // Pre-load browser voices asynchronously to protect system thread timing
+        function loadSystemVoices() {
+            let voices = synth.getVoices();
+            // Fallback selection to an English default module profile
+            selectedVoice = voices.find(v => v.lang.includes('en')) || voices[0];
         }
-      },
-
-      /** Update model status indicator in header */
-      setModelStatus(state, label = '') {
-        const dot  = this.els['model-status-dot'];
-        const lbl  = this.els['model-status-label'];
-        switch (state) {
-          case 'active':
-            dot.className = 'status-dot active';
-            lbl.textContent = label || 'MODEL LIVE';
-            break;
-          case 'loading':
-            dot.className = 'status-dot warn';
-            lbl.textContent = label || 'MODEL LOADING';
-            break;
-          case 'error':
-            dot.className = 'status-dot';
-            lbl.textContent = label || 'MODEL ERROR';
-            break;
-          default:
-            dot.className = 'status-dot';
-            lbl.textContent = 'MODEL IDLE';
-        }
-      },
-
-      /** Show/hide the camera idle overlay */
-      showIdleOverlay(show) {
-        const overlay = this.els['camera-idle-overlay'];
-        if (show) overlay.classList.remove('hidden');
-        else       overlay.classList.add('hidden');
-      },
-
-      /** Toggle scan status badge text/class */
-      setScanStatus(state) {
-        const badge = this.els['scan-status-badge'];
-        badge.className = `scan-status ${state}`;
-        badge.textContent = {
-          idle:    'IDLE',
-          running: 'SCANNING',
-          loading: 'LOADING',
-          error:   'ERROR',
-        }[state] || state.toUpperCase();
-      },
-
-      /** Start/stop the scan-line animation */
-      setScanLine(active) {
-        const line = this.els['scan-line'];
-        if (active) line.classList.add('scanning');
-        else        line.classList.remove('scanning');
-      },
-
-      /** Show model loading overlay with progress */
-      showModelLoader(visible, text = '', pct = 0) {
-        const overlay = this.els['model-loading-overlay'];
-        if (visible) {
-          overlay.classList.add('visible');
-          this.els['model-loader-text'].textContent = text;
-          this.els['model-loader-bar'].style.width  = `${Math.min(pct, 100)}%`;
-          this.els['model-loader-pct'].textContent  = `${Math.round(pct)}%`;
-        } else {
-          overlay.classList.remove('visible');
-        }
-      },
-
-      /** Update spatial audio pan indicator position (panVal: -1 to +1) */
-      updateSpatialIndicator(panVal) {
-        const indicator = this.els['spatial-indicator'];
-        const bar = indicator.parentElement;
-        const pct = ((panVal + 1) / 2) * 100;
-        indicator.style.left = `${pct}%`;
-        bar.setAttribute('aria-valuenow', panVal.toFixed(2));
-      },
-
-      /** Update FPS chip */
-      updateFPS(fps) {
-        this.els['fps-chip'].textContent = `${fps} FPS`;
-      },
-
-      /** Refresh wallet-related display elements */
-      updateWalletUI() {
-        const bal = AppState.balance;
-        this.els['wallet-balance-display'].innerHTML =
-          `${bal}<span class="balance-unit">JNV</span>`;
-        this.els['metric-balance'].textContent = `${bal} JNV`;
-
-        if (AppState.walletAddress) {
-          this.els['wallet-key-display'].textContent = AppState.walletAddress;
-          this.els['wallet-key-display'].classList.add('highlight');
-          this.els['btn-export-wallet'].disabled = false;
-          this.els['btn-verify-path'].disabled = false;
-        } else {
-          this.els['wallet-key-display'].textContent =
-            'No wallet generated · click "Generate JNV Wallet"';
-          this.els['wallet-key-display'].classList.remove('highlight');
-          this.els['btn-export-wallet'].disabled = true;
-          this.els['btn-verify-path'].disabled = true;
-        }
-      },
-
-      /** Update block height display */
-      updateBlockHeight() {
-        const h = AppState.blockHeight;
-        this.els['metric-block'].textContent = `#${String(h).padStart(5,'0')}`;
-        this.flashElement(this.els['metric-block']);
-      },
-
-      /** Update paths verified counter */
-      updatePathsVerified() {
-        this.els['metric-paths'].textContent = AppState.pathsVerified;
-        this.flashElement(this.els['metric-paths']);
-      },
-
-      /** Balance flash animation */
-      flashBalance() {
-        this.flashElement(this.els['wallet-balance-display']);
-        this.flashElement(this.els['metric-balance']);
-      },
-
-      /** Temporarily add a 'flashing' class for CSS animation */
-      flashElement(el) {
-        if (!el) return;
-        el.classList.remove('flashing');
-        void el.offsetWidth; // reflow to restart animation
-        el.classList.add('flashing');
-        el.addEventListener('animationend', () => el.classList.remove('flashing'), { once: true });
-      },
-
-      /** Render detection labels strip */
-      renderDetectionLabels(detections) {
-        const container = this.els['detection-labels'];
-        container.innerHTML = '';
-        detections.slice(0, 6).forEach(det => {
-          const span = document.createElement('span');
-          span.className = 'det-label';
-          const pct = Math.round(det.score * 100);
-          span.textContent = `${det.label} ${pct}%`;
-          container.appendChild(span);
-        });
-      },
-
-      /** Show/hide mining modal */
-      showMiningModal(visible) {
-        const modal = this.els['mining-modal'];
-        if (visible) modal.classList.add('visible');
-        else         modal.classList.remove('visible');
-      },
-
-      /** Update mining modal state */
-      updateMining(hash, progress, statusText) {
-        this.els['mining-hash-display'].textContent = hash;
-        this.els['mining-progress-bar'].style.width = `${progress}%`;
-        this.els['mining-status-text'].textContent = statusText;
-      },
-    };
-
-    /* ═══════════════════════════════════════════════════
-       3. TERMINAL MODULE
-    ═══════════════════════════════════════════════════ */
-    const TerminalModule = {
-      maxLines: 200,
-
-      /** Format current timestamp for log lines */
-      ts() {
-        const now = new Date();
-        return `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0')}`;
-      },
-
-      /**
-       * Append a styled log line.
-       * @param {string} type  - 'sys' | 'nav' | 'blk' | 'err' | 'info'
-       * @param {string} tag   - Short uppercase label e.g. 'SYS', 'NAV', 'BLK'
-       * @param {string} msg   - Message content
-       */
-      log(type, tag, msg) {
-        const logEl = UIController.els['terminal-log'];
-        if (!logEl) return;
-
-        // Prune old lines to stay under maxLines
-        while (logEl.children.length >= this.maxLines) {
-          logEl.removeChild(logEl.firstChild);
+        loadSystemVoices();
+        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadSystemVoices;
         }
 
-        const line = document.createElement('span');
-        line.className = 'log-line';
-        line.innerHTML =
-          `<span class="log-ts">[${this.ts()}]</span> ` +
-          `<span class="log-tag log-${type}">${tag}</span> ` +
-          `<span class="log-msg">${msg}</span>`;
-        logEl.appendChild(line);
-        logEl.scrollTop = logEl.scrollHeight;
-      },
-
-      clear() {
-        UIController.els['terminal-log'].innerHTML = '';
-        this.log('sys', 'SYS', 'Terminal cleared.');
-      },
-
-      /** Boot-up splash messages */
-      bootSplash() {
-        const lines = [
-          ['sys',  'SYS',  'SonicLedger v0.9.1 — JuneVerse Spatial Navigation'],
-          ['sys',  'SYS',  'Initializing decentralized node connection...'],
-          ['info', 'NET',  'Peer discovery: 3 peers found on JNV Testnet'],
-          ['sys',  'SYS',  'Web Audio API: available'],
-          ['sys',  'SYS',  'HRTF PannerNode: configured'],
-          ['info', 'INFO', 'Awaiting wallet generation to activate ledger features'],
-          ['info', 'INFO', 'Camera permission required to start Perception Engine'],
-        ];
-        lines.forEach((l, i) => {
-          setTimeout(() => this.log(l[0], l[1], l[2]), i * 180);
-        });
-      },
-    };
-
-    /* ═══════════════════════════════════════════════════
-       4. TOAST NOTIFICATIONS
-    ═══════════════════════════════════════════════════ */
-    function showToast(message, type = 'info', duration = 4000) {
-      const container = UIController.els['toast-container'];
-      const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.textContent = message;
-      toast.setAttribute('role', 'alert');
-      container.appendChild(toast);
-      setTimeout(() => {
-        if (toast.parentElement) toast.parentElement.removeChild(toast);
-      }, duration);
-    }
-
-    /* ═══════════════════════════════════════════════════
-       5. WALLET MODULE
-    ═══════════════════════════════════════════════════ */
-    const WalletModule = {
-      STORAGE_KEY: 'sonicledger_wallet_v1',
-
-      /** Load persisted wallet from localStorage */
-      load() {
-        try {
-          const raw = localStorage.getItem(this.STORAGE_KEY);
-          if (!raw) return false;
-          const data = JSON.parse(raw);
-          AppState.walletAddress    = data.address    || null;
-          AppState.walletPrivateKey = data.privateKey || null;
-          AppState.balance          = data.balance    || 0;
-          AppState.blockHeight      = data.blockHeight || 0;
-          AppState.pathsVerified    = data.pathsVerified || 0;
-          return true;
-        } catch {
-          return false;
-        }
-      },
-
-      /** Persist current wallet state to localStorage */
-      save() {
-        try {
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
-            address:       AppState.walletAddress,
-            privateKey:    AppState.walletPrivateKey,
-            balance:       AppState.balance,
-            blockHeight:   AppState.blockHeight,
-            pathsVerified: AppState.pathsVerified,
-          }));
-        } catch {
-          TerminalModule.log('err', 'STO', 'localStorage write failed. Storage may be full or blocked.');
-        }
-      },
-
-      /** Generate new wallet using Web3.js */
-      generate() {
-        try {
-          /* Web3.js v4 API */
-          let account;
-          if (typeof Web3 !== 'undefined') {
-            const web3 = new Web3();
-            account = web3.eth.accounts.create();
-          } else {
-            /* Fallback: manual crypto key generation using SubtleCrypto */
-            account = this._fallbackGenerate();
-          }
-          AppState.walletAddress    = account.address;
-          AppState.walletPrivateKey = account.privateKey;
-          AppState.balance          = AppState.balance || 0;
-          this.save();
-          return account;
-        } catch (err) {
-          TerminalModule.log('err', 'WLT', `Wallet generation error: ${err.message}`);
-          /* Even if Web3 fails, generate a mock address for demo purposes */
-          return this._fallbackGenerate();
-        }
-      },
-
-      /** Fallback mock wallet using crypto.getRandomValues */
-      _fallbackGenerate() {
-        const bytes = new Uint8Array(20);
-        crypto.getRandomValues(bytes);
-        const hexAddr = '0x' + Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
-        const pkBytes = new Uint8Array(32);
-        crypto.getRandomValues(pkBytes);
-        const hexPK = '0x' + Array.from(pkBytes).map(b => b.toString(16).padStart(2,'0')).join('');
-        return { address: hexAddr, privateKey: hexPK };
-      },
-
-      /** Add JNV reward to balance */
-      addReward(amount) {
-        AppState.balance += amount;
-        this.save();
-        UIController.updateWalletUI();
-        UIController.flashBalance();
-      },
-
-      /** Export wallet as JSON download */
-      exportJSON() {
-        if (!AppState.walletAddress) return;
-        const data = {
-          address:       AppState.walletAddress,
-          balance:       AppState.balance,
-          pathsVerified: AppState.pathsVerified,
-          blockHeight:   AppState.blockHeight,
-          exportedAt:    new Date().toISOString(),
-          network:       'JNV Testnet',
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = 'sonicledger_wallet.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        TerminalModule.log('sys', 'WLT', 'Wallet exported to sonicledger_wallet.json');
-      },
-    };
-
-    /* ═══════════════════════════════════════════════════
-       6. LEDGER MODULE
-    ═══════════════════════════════════════════════════ */
-    const LedgerModule = {
-      BLOCK_REWARD: 5,
-
-      /** Generate a pseudo-random hex hash for simulation */
-      _randomHash(length = 64) {
-        const chars = '0123456789abcdef';
-        return Array.from({ length }, () => chars[Math.floor(Math.random() * 16)]).join('');
-      },
-
-      /** Simulate block mining animation then commit block */
-      async mineBlock() {
-        if (AppState.isMining) return;
-        if (!AppState.walletAddress) {
-          showToast('Generate a wallet first to mine blocks.', 'error');
-          return;
-        }
-        AppState.isMining = true;
-        UIController.els['btn-verify-path'].disabled = true;
-
-        UIController.showMiningModal(true);
-        TerminalModule.log('blk', 'BLK', 'Initiating proof-of-path broadcast...');
-
-        const stages = [
-          { pct: 10,  status: 'Sampling environmental frame...',      delay: 300 },
-          { pct: 25,  status: 'Hashing spatial topology...',          delay: 400 },
-          { pct: 40,  status: 'Computing merkle root...',             delay: 350 },
-          { pct: 55,  status: 'Signing with local private key...',    delay: 300 },
-          { pct: 70,  status: 'Broadcasting to 3 peers...',           delay: 500 },
-          { pct: 85,  status: 'Awaiting peer confirmations...',       delay: 600 },
-          { pct: 95,  status: 'Block accepted by majority...',        delay: 400 },
-          { pct: 100, status: 'Block finalized!',                     delay: 300 },
-        ];
-
-        let runningHash = '';
-        for (const stage of stages) {
-          /* Update hash display with rolling animation */
-          runningHash = this._randomHash(64);
-          UIController.updateMining(
-            `0x${runningHash}`,
-            stage.pct,
-            stage.status
-          );
-          await new Promise(res => setTimeout(res, stage.delay));
+        function printLog(channel, msg) {
+            const time = new Date().toLocaleTimeString();
+            const element = document.createElement('div');
+            element.className = 'terminal-line';
+            element.innerHTML = `<span class="terminal-timestamp">[${time}] (${channel})</span> ${msg}`;
+            terminal.appendChild(element);
+            terminal.scrollTop = terminal.scrollHeight;
         }
 
-        /* Commit block to state */
-        AppState.blockHeight++;
-        AppState.pathsVerified++;
-        WalletModule.addReward(this.BLOCK_REWARD);
-
-        const blockPayload = {
-          blockIndex:   AppState.blockHeight,
-          timestamp:    new Date().toISOString(),
-          hash:         `0x${runningHash}`,
-          prevHash:     `0x${this._randomHash(64)}`,
-          miner:        AppState.walletAddress,
-          reward:       `+${this.BLOCK_REWARD} JNV`,
-          type:         'SAFE_PATH_CLEARANCE',
-          detections:   AppState.lastDetections.map(d => d.label),
-          nonce:        Math.floor(Math.random() * 999999),
-        };
-
-        /* Update UI */
-        UIController.updateBlockHeight();
-        UIController.updatePathsVerified();
-        WalletModule.save();
-
-        /* Log block payload */
-        TerminalModule.log('blk', 'BLK', `Block #${AppState.blockHeight} mined — hash: 0x${runningHash.slice(0,16)}...`);
-        TerminalModule.log('blk', 'BLK', `Payload: ${JSON.stringify(blockPayload).slice(0, 120)}...`);
-        TerminalModule.log('sys', 'JNV', `+${this.BLOCK_REWARD} JNV rewarded → ${AppState.walletAddress.slice(0, 14)}...`);
-
-        showToast(`✓ Block #${AppState.blockHeight} verified! +${this.BLOCK_REWARD} JNV earned`, 'success');
-
-        /* Close modal */
-        await new Promise(res => setTimeout(res, 500));
-        UIController.showMiningModal(false);
-        AppState.isMining = false;
-        UIController.els['btn-verify-path'].disabled = false;
-
-        /* Play reward chime */
-        AudioModule.playRewardChime();
-      },
-
-      /** Simulate pinging the node network */
-      async pingNode() {
-        TerminalModule.log('info', 'NET', 'Pinging JNV Testnet node...');
-        const latency = Math.floor(Math.random() * 80) + 12;
-        await new Promise(res => setTimeout(res, latency * 5));
-        TerminalModule.log('nav', 'NET', `Pong received — ${latency}ms latency | 3 peers active`);
-        showToast(`Node ping: ${latency}ms`, 'info', 2500);
-      },
-
-      /** Simulate ledger sync */
-      async syncLedger() {
-        const syncChip = UIController.els['node-sync-chip'];
-        syncChip.textContent = 'SYNCING';
-        syncChip.className   = 'chip';
-        TerminalModule.log('sys', 'SYN', 'Syncing ledger with network peers...');
-        const newBlocks = Math.floor(Math.random() * 8) + 1;
-        await new Promise(res => setTimeout(res, 1200));
-        AppState.blockHeight += newBlocks;
-        UIController.updateBlockHeight();
-        WalletModule.save();
-        syncChip.textContent = 'SYNCED';
-        syncChip.className   = 'chip live';
-        TerminalModule.log('sys', 'SYN', `Synced ${newBlocks} new blocks. Chain height: #${AppState.blockHeight}`);
-        showToast(`Ledger synced — ${newBlocks} new blocks`, 'success', 2500);
-      },
-    };
-
-    /* ═══════════════════════════════════════════════════
-       7. AUDIO MODULE — SPATIAL HRTF ENGINE
-    ═══════════════════════════════════════════════════ */
-    const AudioModule = {
-      ctx: null,
-      listener: null,
-      masterGain: null,
-      sonarInterval: null,
-
-      /** Initialize AudioContext — must be called after user gesture */
-      init() {
-        if (AppState.audioReady) return true;
-        try {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (!AudioCtx) {
-            TerminalModule.log('err', 'AUD', 'Web Audio API not supported in this browser.');
-            return false;
-          }
-          this.ctx = new AudioCtx();
-          AppState.audioContext = this.ctx;
-
-          /* Master gain node for overall volume control */
-          this.masterGain = this.ctx.createGain();
-          this.masterGain.gain.value = 0.6;
-          this.masterGain.connect(this.ctx.destination);
-
-          /* Configure listener orientation (facing forward) */
-          this.listener = this.ctx.listener;
-          if (this.listener.forwardX) {
-            this.listener.forwardX.value = 0;
-            this.listener.forwardY.value = 0;
-            this.listener.forwardZ.value = -1;
-            this.listener.upX.value = 0;
-            this.listener.upY.value = 1;
-            this.listener.upZ.value = 0;
-          } else if (this.listener.setOrientation) {
-            this.listener.setOrientation(0, 0, -1, 0, 1, 0);
-          }
-
-          AppState.audioReady = true;
-          TerminalModule.log('sys', 'AUD', 'Web Audio API initialized — HRTF PannerNode active');
-          return true;
-        } catch (err) {
-          TerminalModule.log('err', 'AUD', `Audio init failed: ${err.message}`);
-          return false;
-        }
-      },
-
-      /** Resume AudioContext if it was suspended by autoplay policy */
-      async resume() {
-        if (!this.ctx) this.init();
-        if (this.ctx && this.ctx.state === 'suspended') {
-          await this.ctx.resume();
-        }
-      },
-
-      /**
-       * Play a single spatial sonar ping for a detected object.
-       * @param {number} panX      — normalized -1 (left) to +1 (right)
-       * @param {number} depthZ    — normalized 0 (far) to 1 (close)
-       * @param {string} label     — object class label
-       */
-      playSonarPing(panX, depthZ, label) {
-        if (!AppState.audioReady || !this.ctx) return;
-        if (this.ctx.state === 'suspended') return;
-
-        /* Map depth to frequency: close = high, far = low */
-        const baseFreq = 220;
-        const maxFreq  = 880;
-        const freq = baseFreq + depthZ * (maxFreq - baseFreq);
-
-        /* Map depth to volume: close = louder */
-        const volume = 0.05 + depthZ * 0.45;
-
-        /* Build audio graph: OscillatorNode → GainNode → PannerNode → masterGain */
-        const osc   = this.ctx.createOscillator();
-        const gain  = this.ctx.createGain();
-        const panner = this.ctx.createPanner();
-
-        /* HRTF spatial audio configuration */
-        panner.panningModel = 'HRTF';
-        panner.distanceModel = 'inverse';
-        panner.refDistance   = 1;
-        panner.maxDistance   = 10;
-        panner.rolloffFactor = 1.5;
-        panner.coneInnerAngle = 360;
-        panner.coneOuterAngle = 0;
-        panner.coneOuterGain  = 0;
-
-        /* Position in 3D space:
-           X = horizontal pan (-1 to +1 mapped to -5 to +5 meters)
-           Y = 0 (same height as listener)
-           Z = depth (negative = in front of listener)       */
-        const posX = panX * 5;
-        const posZ = -(1 - depthZ) * 8 - 1;
-
-        if (panner.positionX) {
-          panner.positionX.value = posX;
-          panner.positionY.value = 0;
-          panner.positionZ.value = posZ;
-        } else if (panner.setPosition) {
-          panner.setPosition(posX, 0, posZ);
+        function setupWeb3Node() {
+            web3 = new Web3();
+            const account = web3.eth.accounts.create();
+            document.getElementById('wallet-addr').innerText = account.address.substring(0,6) + "..." + account.address.substring(36);
+            printLog("WEB3", `Consensus node wallet created.`);
         }
 
-        /* Short ping envelope: fast attack, fast release */
-        const now = this.ctx.currentTime;
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(volume, now + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        // Complete, Bulletproof Vocalization Framework Routine
+        function voiceGuide(objectLabel, safeAction) {
+            const now = Date.now();
+            
+            // Limit audio warning triggers to a maximum density profile of once every 4.5 seconds to avoid breaking audio loops
+            if (now - lastSpokenTime < 4500) return; 
 
-        /* Oscillator: sine for a clean sonar tone */
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now);
-        osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + 0.18);
+            // Hard reset speech buffer stack lines to wipe away lag jams
+            synth.cancel();
 
-        osc.connect(gain);
-        gain.connect(panner);
-        panner.connect(this.masterGain);
-
-        osc.start(now);
-        osc.stop(now + 0.25);
-
-        /* Update UI spatial indicator */
-        UIController.updateSpatialIndicator(panX);
-      },
-
-      /**
-       * Main spatial sound loop — called when detections update.
-       * Fires one ping per detected object with appropriate pan & depth.
-       * @param {Array} detections — Array of {label, panX, depthZ, score}
-       */
-      processSpatialDetections(detections) {
-        if (!detections || detections.length === 0) return;
-        /* Stagger pings slightly to avoid audio collision */
-        detections.slice(0, 3).forEach((det, i) => {
-          setTimeout(() => {
-            this.playSonarPing(det.panX, det.depthZ, det.label);
-          }, i * 120);
-        });
-      },
-
-      /** Play reward chime when a block is mined */
-      playRewardChime() {
-        if (!AppState.audioReady || !this.ctx) return;
-        const notes = [523.25, 659.25, 783.99, 1046.5]; /* C5, E5, G5, C6 */
-        notes.forEach((freq, i) => {
-          const osc  = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          const now  = this.ctx.currentTime + i * 0.12;
-          gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-          osc.type = 'triangle';
-          osc.frequency.value = freq;
-          osc.connect(gain);
-          gain.connect(this.masterGain);
-          osc.start(now);
-          osc.stop(now + 0.5);
-        });
-      },
-
-      /** Play error tone */
-      playErrorTone() {
-        if (!AppState.audioReady || !this.ctx) return;
-        const osc  = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const now  = this.ctx.currentTime;
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.linearRampToValueAtTime(80, now + 0.4);
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(now);
-        osc.stop(now + 0.45);
-      },
-
-      /** Stop and clean up all audio */
-      stop() {
-        if (this.sonarInterval) {
-          clearInterval(this.sonarInterval);
-          this.sonarInterval = null;
-        }
-        UIController.updateSpatialIndicator(0);
-      },
-    };
-
-    /* ═══════════════════════════════════════════════════
-       8. PERCEPTION ENGINE — TRANSFORMERS.JS + WEBCAM
-    ═══════════════════════════════════════════════════ */
-    const PerceptionEngine = {
-      detector: null,
-      stream:   null,
-      loopHandle: null,
-      video: null,
-      canvas: null,
-      ctx: null,
-
-      /* Objects to listen for — common navigation hazards */
-      WATCH_LABELS: new Set([
-        'person','chair','couch','sofa','dining table','table','desk',
-        'potted plant','vase','laptop','tv','monitor','cell phone',
-        'cup','bottle','bowl','book','door','window','bed','toilet',
-        'fire hydrant','stop sign','bicycle','car','motorcycle','bus',
-        'backpack','handbag','suitcase','umbrella','clock','scissors',
-        'keyboard','mouse','remote','toothbrush','sports ball',
-      ]),
-
-      /* Neon color map by label category */
-      LABEL_COLORS: {
-        person:       '#EF4444',
-        chair:        '#10B981',
-        couch:        '#10B981',
-        sofa:         '#10B981',
-        'dining table':'#F59E0B',
-        laptop:       '#06B6D4',
-        tv:           '#06B6D4',
-        car:          '#A78BFA',
-        bicycle:      '#F472B6',
-        default:      '#10B981',
-      },
-
-      /** Initialize camera stream */
-      async startCamera() {
-        try {
-          const constraints = {
-            video: {
-              facingMode: 'environment',
-              width:  { ideal: 640 },
-              height: { ideal: 480 },
+            let textInstruction = `Notice. There is a ${objectLabel} blocking your center path. `;
+            if (safeAction === 'right') {
+                textInstruction += "Please turn right to bypass it.";
+            } else if (safeAction === 'left') {
+                textInstruction += "Please turn left to bypass it.";
+            } else {
+                textInstruction += "Path completely obstructed. Please stop.";
             }
-          };
-          this.stream = await navigator.mediaDevices.getUserMedia(constraints);
-          this.video  = UIController.els['webcam-video'];
-          this.video.srcObject = this.stream;
-          await this.video.play();
 
-          AppState.cameraActive = true;
-          UIController.setCameraStatus('active');
-          UIController.showIdleOverlay(false);
-          TerminalModule.log('sys', 'CAM', 'Webcam stream acquired — ready');
-          return true;
-        } catch (err) {
-          AppState.cameraActive = false;
-          UIController.setCameraStatus('error');
-          UIController.setScanStatus('error');
-          if (err.name === 'NotAllowedError') {
-            TerminalModule.log('err', 'CAM', 'Camera permission denied by user or browser policy.');
-            showToast('Camera permission denied. Please allow access and retry.', 'error', 6000);
-          } else if (err.name === 'NotFoundError') {
-            TerminalModule.log('err', 'CAM', 'No camera device found on this system.');
-            showToast('No camera detected on this device.', 'error', 6000);
-          } else {
-            TerminalModule.log('err', 'CAM', `Camera error: ${err.name} — ${err.message}`);
-            showToast(`Camera error: ${err.message}`, 'error', 6000);
-          }
-          AudioModule.playErrorTone();
-          return false;
+            const utterance = new SpeechSynthesisUtterance(textInstruction);
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.rate = 0.95; // Human-friendly pace
+            utterance.volume = 1.0; // Enforce maximum volume configuration metrics
+
+            // Handshake execution out loud
+            synth.speak(utterance);
+            lastSpokenTime = now;
+            printLog("VOCAL ENGINE", `Spoken out loud: "${textInstruction}"`);
         }
-      },
 
-      /** Load DETR-ResNet-50 model via Transformers.js */
-      async loadModel() {
-        if (AppState.modelLoaded) return true;
-        if (AppState.modelLoading) return false;
+        btnStart.addEventListener('click', async () => {
+            btnStart.disabled = true;
+            btnStart.innerText = "LOADING CORE SYSTEMS...";
+            statusBadge.innerText = "• COMPILING TENSORFLOW...";
+            statusBadge.style.color = "#3b82f6";
+            
+            // CRITICAL STEP: Explicit initial spoken trigger to unlock native sound engine privileges 
+            synth.cancel();
+            const handshakeUtterance = new SpeechSynthesisUtterance("JuneVerse system online. Scanning pathways.");
+            if (selectedVoice) handshakeUtterance.voice = selectedVoice;
+            synth.speak(handshakeUtterance);
+            printLog("VOCAL ENGINE", "Audio buffer handshake channel opened successfully.");
 
-        AppState.modelLoading = true;
-        UIController.setScanStatus('loading');
-        UIController.setModelStatus('loading', 'LOADING MODEL');
-        UIController.showModelLoader(true, 'FETCHING PERCEPTION MODEL...', 5);
-        TerminalModule.log('sys', 'MDL', 'Loading Xenova/detr-resnet-50 (on-device inference)...');
+            setupWeb3Node();
 
-        try {
-          /* Transformers.js pipeline for object detection */
-          const { pipeline, env } = transformers;
-
-          /* Allow remote model fetching */
-          env.allowRemoteModels = true;
-
-          /* Progress tracking callback */
-          const onProgress = (progress) => {
-            if (progress.status === 'progress') {
-              const pct = Math.round(progress.progress || 0);
-              UIController.showModelLoader(
-                true,
-                `LOADING: ${progress.file || 'model weights'}`,
-                pct
-              );
-              UIController.els['model-loader-pct'].textContent = `${pct}%`;
-            } else if (progress.status === 'ready') {
-              UIController.showModelLoader(true, 'COMPILING INFERENCE GRAPH...', 95);
+            // Fire Camera Stream Access Pipelines
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: 640, height: 480 }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+                printLog("HARDWARE", "Camera active channel locked.");
+            } catch (err) {
+                printLog("ERROR", "Sensor array access blocked.");
+                alert("Webcam device permissions are mandatory for runtime processing execution.");
+                btnStart.disabled = false;
+                btnStart.innerText = "ACTIVATE SYSTEM";
+                return;
             }
-          };
 
-          this.detector = await pipeline(
-            'object-detection',
-            'Xenova/detr-resnet-50',
-            { progress_callback: onProgress }
-          );
-
-          AppState.modelLoaded  = true;
-          AppState.modelLoading = false;
-
-          UIController.showModelLoader(false);
-          UIController.setModelStatus('active', 'MODEL LIVE');
-          UIController.setScanStatus('running');
-          TerminalModule.log('sys', 'MDL', 'Perception model loaded — inference ready');
-          showToast('Perception engine online', 'success', 3000);
-          return true;
-        } catch (err) {
-          AppState.modelLoading = false;
-          UIController.showModelLoader(false);
-          UIController.setModelStatus('error', 'MODEL ERROR');
-          UIController.setScanStatus('error');
-          TerminalModule.log('err', 'MDL', `Model load failed: ${err.message}`);
-          showToast(`Model failed to load: ${err.message}`, 'error', 7000);
-          AudioModule.playErrorTone();
-
-          /* Fallback: run mock detection so the UI stays functional */
-          this._activateMockDetection();
-          return false;
-        }
-      },
-
-      /**
-       * Fallback mock detection mode — simulates realistic object placement
-       * so the spatial audio and ledger features still work in environments
-       * where the model CDN is unavailable or the browser lacks WebAssembly support.
-       */
-      _activateMockDetection() {
-        TerminalModule.log('warn', 'MDL', 'Activating mock detection fallback — spatial audio still functional.');
-        AppState.modelLoaded = true;
-        this.detector = null;
-        UIController.setModelStatus('active', 'MOCK MODE');
-        UIController.setScanStatus('running');
-      },
-
-      /** Run a single detection frame */
-      async runDetectionFrame() {
-        if (!this.video || !this.canvas) return;
-        if (this.video.readyState < 2) return;
-
-        /* Setup canvas dimensions to match video */
-        const vw = this.video.videoWidth  || this.video.clientWidth;
-        const vh = this.video.videoHeight || this.video.clientHeight;
-        if (vw === 0 || vh === 0) return;
-
-        this.canvas.width  = vw;
-        this.canvas.height = vh;
-        this.ctx = this.canvas.getContext('2d');
-        this.ctx.clearRect(0, 0, vw, vh);
-
-        let detections = [];
-
-        if (this.detector) {
-          /* Real inference via Transformers.js */
-          try {
-            const results = await this.detector(this.video, { threshold: 0.45 });
-            detections = results
-              .filter(r => this.WATCH_LABELS.has(r.label.toLowerCase()))
-              .map(r => {
-                const box = r.box;
-                const centerX = (box.xmin + box.xmax) / 2;
-                /* Normalize pan: 0..1 → -1..+1 */
-                const panX = (centerX / vw) * 2 - 1;
-                /* Normalize depth from box area: larger box = closer */
-                const boxArea  = ((box.xmax - box.xmin) * (box.ymax - box.ymin)) / (vw * vh);
-                const depthZ   = Math.min(Math.sqrt(boxArea) * 3.5, 1.0);
-                return {
-                  label:  r.label.toLowerCase(),
-                  score:  r.score,
-                  box:    box,
-                  panX,
-                  depthZ,
+            // Load COCO-SSD Vision model weights
+            try {
+                printLog("AI PIPELINE", "Downloading object tracking layers into page cache sandbox...");
+                model = await cocoSsd.load();
+                
+                printLog("AI PIPELINE", "Detection engine fully configured.");
+                statusBadge.innerText = "• ASSIST PIPELINE ACTIVE";
+                statusBadge.style.color = "var(--accent-green)";
+                btnStart.innerText = "SYSTEM ACTIVE";
+                
+                video.onloadeddata = () => {
+                    startPerceptionLoop();
                 };
-              });
-          } catch (inferErr) {
-            /* Silent fail on individual frames */
-          }
-        } else {
-          /* Mock detection — generates plausible bounding boxes */
-          detections = this._generateMockDetections(vw, vh);
-        }
-
-        /* Draw bounding boxes on canvas */
-        this.drawDetections(detections, vw, vh);
-
-        /* Pipe spatial audio */
-        if (detections.length > 0) {
-          AudioModule.processSpatialDetections(detections);
-        } else {
-          /* Slowly return indicator to center */
-          UIController.updateSpatialIndicator(0);
-        }
-
-        /* Update detection label strip */
-        UIController.renderDetectionLabels(detections);
-
-        /* Cache for ledger block payload */
-        AppState.lastDetections = detections;
-
-        /* Log navigation events occasionally */
-        if (detections.length > 0 && Math.random() < 0.15) {
-          const det = detections[0];
-          const side = det.panX < -0.3 ? 'LEFT' : det.panX > 0.3 ? 'RIGHT' : 'CENTER';
-          const dist = det.depthZ > 0.7 ? 'CLOSE' : det.depthZ > 0.4 ? 'MID' : 'FAR';
-          TerminalModule.log('nav', 'NAV',
-            `${det.label.toUpperCase()} detected — ${side} ${dist} (score: ${(det.score*100).toFixed(1)}%)`
-          );
-        }
-
-        /* FPS tracking */
-        AppState.frameCount++;
-      },
-
-      /** Draw styled bounding boxes and labels on canvas */
-      drawDetections(detections, vw, vh) {
-        if (!this.ctx) return;
-        const ctx = this.ctx;
-
-        detections.forEach(det => {
-          const box   = det.box;
-          const color = this.LABEL_COLORS[det.label] || this.LABEL_COLORS.default;
-          const x  = box.xmin;
-          const y  = box.ymin;
-          const w  = box.xmax - box.xmin;
-          const h  = box.ymax - box.ymin;
-
-          /* Glow shadow */
-          ctx.shadowColor = color;
-          ctx.shadowBlur  = 12;
-
-          /* Main bounding box */
-          ctx.strokeStyle = color;
-          ctx.lineWidth   = 1.5;
-          ctx.strokeRect(x, y, w, h);
-
-          /* Corner accents — L-shaped brackets at each corner */
-          const cs = Math.min(w, h) * 0.18;
-          ctx.lineWidth = 2.5;
-          ctx.shadowBlur = 16;
-
-          const corners = [
-            { sx: x,     sy: y,     ex: x+cs,   ey: y,     ex2: x,    ey2: y+cs  },
-            { sx: x+w,   sy: y,     ex: x+w-cs, ey: y,     ex2: x+w,  ey2: y+cs  },
-            { sx: x,     sy: y+h,   ex: x+cs,   ey: y+h,   ex2: x,    ey2: y+h-cs},
-            { sx: x+w,   sy: y+h,   ex: x+w-cs, ey: y+h,   ex2: x+w,  ey2: y+h-cs},
-          ];
-
-          corners.forEach(c => {
-            ctx.beginPath();
-            ctx.moveTo(c.ex,  c.ey);
-            ctx.lineTo(c.sx,  c.sy);
-            ctx.lineTo(c.ex2, c.ey2);
-            ctx.stroke();
-          });
-
-          /* Reset shadow for label */
-          ctx.shadowBlur = 4;
-
-          /* Label pill background */
-          const labelText = `${det.label} ${Math.round(det.score * 100)}%`;
-          ctx.font         = 'bold 11px "Share Tech Mono", monospace';
-          ctx.textBaseline = 'alphabetic';
-          const textWidth  = ctx.measureText(labelText).width;
-          const labelX     = Math.max(0, x);
-          const labelY     = Math.max(16, y - 4);
-
-          ctx.fillStyle = color + 'CC';
-          ctx.fillRect(labelX - 2, labelY - 13, textWidth + 8, 17);
-
-          /* Label text */
-          ctx.fillStyle    = '#050D0A';
-          ctx.shadowBlur   = 0;
-          ctx.fillText(labelText, labelX + 2, labelY);
-
-          /* Depth indicator — dot in center of box */
-          const dotSize = 3 + det.depthZ * 4;
-          const cx = x + w / 2;
-          const cy = y + h / 2;
-          ctx.shadowBlur = 8;
-          ctx.fillStyle  = color;
-          ctx.beginPath();
-          ctx.arc(cx, cy, dotSize, 0, Math.PI * 2);
-          ctx.fill();
-
-          /* Cross-hair lines through center */
-          ctx.shadowBlur = 0;
-          ctx.globalAlpha = 0.3;
-          ctx.strokeStyle = color;
-          ctx.lineWidth   = 0.8;
-          ctx.beginPath(); ctx.moveTo(cx - 10, cy); ctx.lineTo(cx + 10, cy); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy + 10); ctx.stroke();
-          ctx.globalAlpha = 1;
-        });
-
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = 'transparent';
-      },
-
-      /**
-       * Generate mock detections for fallback mode.
-       * Uses sine-wave positions to simulate moving objects.
-       */
-      _generateMockDetections(vw, vh) {
-        const t = Date.now() / 1000;
-        const mockLabels = ['person', 'chair', 'laptop', 'bottle', 'cup'];
-        const count = Math.floor(Math.random() * 3) + 1;
-        return Array.from({ length: count }, (_, i) => {
-          const label   = mockLabels[i % mockLabels.length];
-          const cx      = (0.2 + 0.6 * ((Math.sin(t * 0.4 + i * 2.1) + 1) / 2)) * vw;
-          const cy      = (0.2 + 0.6 * ((Math.cos(t * 0.3 + i * 1.7) + 1) / 2)) * vh;
-          const size    = (0.12 + 0.1 * Math.abs(Math.sin(t * 0.2 + i)));
-          const bw      = size * vw;
-          const bh      = size * vh * 1.3;
-          const panX    = ((cx / vw) * 2 - 1);
-          const boxArea = (bw * bh) / (vw * vh);
-          const depthZ  = Math.min(Math.sqrt(boxArea) * 3.5, 1.0);
-          return {
-            label,
-            score: 0.6 + Math.random() * 0.35,
-            box:   {
-              xmin: Math.max(0, cx - bw / 2),
-              ymin: Math.max(0, cy - bh / 2),
-              xmax: Math.min(vw, cx + bw / 2),
-              ymax: Math.min(vh, cy + bh / 2),
-            },
-            panX,
-            depthZ,
-          };
-        });
-      },
-
-      /** Main detection loop — targets ~700–800ms intervals */
-      startLoop() {
-        if (this.loopHandle) return;
-        const INTERVAL = 750;
-        let lastRun = 0;
-
-        const tick = async (ts) => {
-          if (!AppState.scannerRunning) return;
-          this.loopHandle = requestAnimationFrame(tick);
-          if (ts - lastRun >= INTERVAL) {
-            lastRun = ts;
-            await this.runDetectionFrame();
-          }
-        };
-
-        AppState.scannerRunning = true;
-        this.loopHandle = requestAnimationFrame(tick);
-      },
-
-      /** Stop detection loop and clear canvas */
-      stopLoop() {
-        AppState.scannerRunning = false;
-        if (this.loopHandle) {
-          cancelAnimationFrame(this.loopHandle);
-          this.loopHandle = null;
-        }
-        if (this.canvas && this.ctx) {
-          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        }
-        UIController.renderDetectionLabels([]);
-        AudioModule.stop();
-        UIController.updateSpatialIndicator(0);
-      },
-
-      /** Full start sequence: camera → model → loop */
-      async start() {
-        UIController.setScanStatus('loading');
-        UIController.els['btn-start-scanner'].disabled = true;
-
-        /* 1. Resume AudioContext (must happen after user gesture) */
-        await AudioModule.resume();
-
-        /* 2. Acquire camera stream */
-        const cameraOk = await this.startCamera();
-        if (!cameraOk) {
-          UIController.els['btn-start-scanner'].disabled = false;
-          UIController.setScanStatus('error');
-          return;
-        }
-
-        /* 3. Set up canvas */
-        this.canvas = UIController.els['detection-canvas'];
-        this.video  = UIController.els['webcam-video'];
-
-        /* Wait for video metadata so we know dimensions */
-        await new Promise(resolve => {
-          if (this.video.readyState >= 1) return resolve();
-          this.video.addEventListener('loadedmetadata', resolve, { once: true });
-        });
-
-        this.canvas.width  = this.video.videoWidth  || 640;
-        this.canvas.height = this.video.videoHeight || 480;
-        this.ctx = this.canvas.getContext('2d');
-
-        /* 4. Load model (or fallback) */
-        await this.loadModel();
-
-        /* 5. Start scan line animation */
-        UIController.setScanLine(true);
-
-        /* 6. Start detection loop */
-        this.startLoop();
-
-        /* 7. Update button states */
-        UIController.els['btn-stop-scanner'].disabled = false;
-        UIController.els['btn-start-scanner'].disabled = true;
-
-        TerminalModule.log('nav', 'SYS', 'Perception Engine ONLINE — spatial scanning active');
-        showToast('Spatial scanner started', 'success', 3000);
-      },
-
-      /** Full stop sequence */
-      stop() {
-        this.stopLoop();
-
-        /* Stop camera stream tracks */
-        if (this.stream) {
-          this.stream.getTracks().forEach(t => t.stop());
-          this.stream = null;
-        }
-        if (this.video) {
-          this.video.srcObject = null;
-        }
-
-        AppState.cameraActive  = false;
-        AppState.scannerRunning = false;
-
-        UIController.setCameraStatus('off');
-        UIController.setModelStatus('idle');
-        UIController.setScanStatus('idle');
-        UIController.setScanLine(false);
-        UIController.showIdleOverlay(true);
-
-        UIController.els['btn-start-scanner'].disabled = false;
-        UIController.els['btn-stop-scanner'].disabled  = true;
-
-        TerminalModule.log('sys', 'SYS', 'Perception Engine stopped — camera stream released');
-        showToast('Scanner stopped', 'info', 2000);
-      },
-    };
-
-    /* ═══════════════════════════════════════════════════
-       9. FPS COUNTER
-    ═══════════════════════════════════════════════════ */
-    function startFPSCounter() {
-      AppState.fpsUpdateHandle = setInterval(() => {
-        UIController.updateFPS(AppState.frameCount);
-        AppState.frameCount = 0;
-      }, 1000);
-    }
-
-    function stopFPSCounter() {
-      clearInterval(AppState.fpsUpdateHandle);
-      UIController.updateFPS(0);
-    }
-
-    /* ═══════════════════════════════════════════════════
-       10. BLOCK HEIGHT TICKER
-         Simulates background block production by other miners
-    ═══════════════════════════════════════════════════ */
-    function startBlockTicker() {
-      setInterval(() => {
-        if (Math.random() < 0.15) {
-          AppState.blockHeight++;
-          UIController.updateBlockHeight();
-          WalletModule.save();
-          TerminalModule.log('blk', 'NET',
-            `Peer block #${AppState.blockHeight} confirmed — 0x${
-              Array.from({length:8}, () => Math.floor(Math.random()*16).toString(16)).join('')
-            }...`
-          );
-        }
-      }, 6000);
-    }
-
-    /* ═══════════════════════════════════════════════════
-       11. APP BOOTSTRAP
-    ═══════════════════════════════════════════════════ */
-    const App = {
-      init() {
-        /* Initialize UI element cache */
-        UIController.init();
-
-        /* Load persisted wallet/state */
-        const hadWallet = WalletModule.load();
-
-        /* Restore block height from random starting point if fresh */
-        if (!hadWallet) {
-          AppState.blockHeight = Math.floor(Math.random() * 4000) + 48200;
-        }
-
-        /* Update all wallet UI to match loaded state */
-        UIController.updateWalletUI();
-        UIController.updateBlockHeight();
-        UIController.updatePathsVerified();
-
-        /* Boot terminal */
-        TerminalModule.bootSplash();
-
-        if (hadWallet) {
-          setTimeout(() => {
-            TerminalModule.log('sys', 'WLT',
-              `Wallet restored: ${AppState.walletAddress.slice(0,14)}... | ${AppState.balance} JNV`
-            );
-          }, 1500);
-        }
-
-        /* Start background systems */
-        startFPSCounter();
-        startBlockTicker();
-
-        /* Wire up all event listeners */
-        this.bindEvents();
-
-        /* Peer count animation */
-        this.animatePeerCount();
-      },
-
-      bindEvents() {
-        /* ─── Scanner buttons ─────────────────────────── */
-        UIController.els['btn-start-scanner'].addEventListener('click', async () => {
-          /* Initialize audio on first user gesture */
-          if (!AppState.audioReady) AudioModule.init();
-          await PerceptionEngine.start();
-          startFPSCounter();
-        });
-
-        UIController.els['btn-stop-scanner'].addEventListener('click', () => {
-          PerceptionEngine.stop();
-          stopFPSCounter();
-        });
-
-        /* ─── Wallet generation ───────────────────────── */
-        UIController.els['btn-generate-wallet'].addEventListener('click', () => {
-          const wasExisting = !!AppState.walletAddress;
-          const account = WalletModule.generate();
-
-          AppState.walletAddress    = account.address;
-          AppState.walletPrivateKey = account.privateKey;
-
-          WalletModule.save();
-          UIController.updateWalletUI();
-
-          if (wasExisting) {
-            TerminalModule.log('sys', 'WLT', `Wallet regenerated: ${account.address}`);
-            showToast('New wallet generated — old wallet replaced', 'info');
-          } else {
-            TerminalModule.log('sys', 'WLT', `New wallet generated: ${account.address}`);
-            TerminalModule.log('sys', 'WLT', `Private key secured in local memory (NEVER share)`);
-            showToast('✓ JNV Wallet created!', 'success');
-            UIController.els['btn-verify-path'].disabled = false;
-          }
-        });
-
-        /* ─── Wallet key copy to clipboard ───────────── */
-        UIController.els['wallet-key-display'].addEventListener('click', () => {
-          if (!AppState.walletAddress) return;
-          try {
-            navigator.clipboard.writeText(AppState.walletAddress)
-              .then(() => showToast('Address copied to clipboard', 'success', 2000))
-              .catch(() => showToast('Clipboard copy failed', 'error', 2000));
-          } catch {
-            showToast('Clipboard not available', 'error', 2000);
-          }
-        });
-
-        /* ─── Export wallet ───────────────────────────── */
-        UIController.els['btn-export-wallet'].addEventListener('click', () => {
-          WalletModule.exportJSON();
-        });
-
-        /* ─── Verify Safe Path (mine block) ──────────── */
-        UIController.els['btn-verify-path'].addEventListener('click', async () => {
-          if (!AppState.walletAddress) {
-            showToast('Generate a wallet first', 'error');
-            return;
-          }
-          await LedgerModule.mineBlock();
-        });
-
-        /* ─── Ping node ───────────────────────────────── */
-        UIController.els['btn-ping-node'].addEventListener('click', async () => {
-          await LedgerModule.pingNode();
-        });
-
-        /* ─── Sync ledger ─────────────────────────────── */
-        UIController.els['btn-sync-ledger'].addEventListener('click', async () => {
-          await LedgerModule.syncLedger();
-        });
-
-        /* ─── Clear terminal ──────────────────────────── */
-        UIController.els['btn-clear-log'].addEventListener('click', () => {
-          TerminalModule.clear();
-        });
-
-        /* ─── Dismiss mining modal on backdrop click ─── */
-        UIController.els['mining-modal'].addEventListener('click', (e) => {
-          if (e.target === UIController.els['mining-modal'] && !AppState.isMining) {
-            UIController.showMiningModal(false);
-          }
-        });
-
-        /* ─── Keyboard: Escape to close modal ─────────── */
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && !AppState.isMining) {
-            UIController.showMiningModal(false);
-          }
-        });
-
-        /* ─── Audio resume on any page interaction ────── */
-        document.addEventListener('click', () => {
-          if (AppState.audioReady && AudioModule.ctx?.state === 'suspended') {
-            AudioModule.ctx.resume();
-          }
-        }, { once: false });
-
-        /* ─── Visibility change — pause detection ─────── */
-        document.addEventListener('visibilitychange', () => {
-          if (document.hidden && AppState.scannerRunning) {
-            /* Pause audio but keep loop running to maintain state */
-            if (AudioModule.ctx?.state === 'running') {
-              AudioModule.ctx.suspend();
+            } catch (err) {
+                printLog("ERROR", `AI pipeline boot fault: ${err.message}`);
             }
-          } else if (!document.hidden && AppState.audioReady) {
-            AudioModule.ctx?.resume();
-          }
         });
-      },
 
-      /** Animate peer count display for realism */
-      animatePeerCount() {
-        let peers = 3;
-        setInterval(() => {
-          const delta = Math.random() < 0.2 ? (Math.random() < 0.5 ? -1 : 1) : 0;
-          peers = Math.max(1, Math.min(8, peers + delta));
-          UIController.els['peer-chip'].textContent = `${peers} PEERS`;
-        }, 8000);
-      },
-    };
+        function startPerceptionLoop() {
+            const laneLeft = document.getElementById('lane-left');
+            const laneCenter = document.getElementById('lane-center');
+            const laneRight = document.getElementById('lane-right');
 
-    /* ════════════════════════════════════════════
-       BOOT
-    ═════════════════════════════════════════════ */
-    document.addEventListener('DOMContentLoaded', () => App.init());
-  </script>
+            async function predictFrame() {
+                if (!model || video.paused || video.ended) {
+                    requestAnimationFrame(predictFrame);
+                    return;
+                }
+
+                const predictions = await model.detect(video);
+                
+                let centerBlocked = false;
+                let leftBlocked = false;
+                let rightBlocked = false;
+                let activeObstacleItem = "";
+
+                laneLeft.className = "lane";
+                laneCenter.className = "lane";
+                laneRight.className = "lane";
+
+                predictions.forEach(prediction => {
+                    // Filter targets with validation confidence boundaries > 50%
+                    if (prediction.score > 0.50) {
+                        const [x, y, width, height] = prediction.bbox;
+                        const videoWidth = video.videoWidth || 640;
+                        const objectMidX = (x + (width / 2)) / videoWidth;
+
+                        // Lane partition logic boundaries mapping layout
+                        if (objectMidX > 0.33 && objectMidX < 0.66) {
+                            centerBlocked = true;
+                            activeObstacleItem = prediction.class;
+                            laneCenter.className = "lane active-block";
+                        } else if (objectMidX <= 0.33) {
+                            leftBlocked = true;
+                            laneLeft.className = "lane active-block";
+                        } else if (objectMidX >= 0.66) {
+                            rightBlocked = true;
+                            laneRight.className = "lane active-block";
+                        }
+                    }
+                });
+
+                // Decision evaluation execution
+                if (centerBlocked) {
+                    let bypassRoute = 'none';
+                    if (!rightBlocked) {
+                        bypassRoute = 'right';
+                    } else if (!leftBlocked) {
+                        bypassRoute = 'left';
+                    }
+
+                    // Direct invocation call to our updated vocal routine system
+                    voiceGuide(activeObstacleItem, bypassRoute);
+
+                    // Web3 Ledger metric increment steps updates
+                    currentBlock += 1;
+                    tokenBalance += 0.75;
+                    document.getElementById('ledger-block').innerText = `#${currentBlock}`;
+                    document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
+                    printLog("LEDGER", `Verified transaction logged onto Block #${currentBlock}. Allocation +0.75 JNV payout.`);
+                }
+
+                setTimeout(() => {
+                    requestAnimationFrame(predictFrame);
+                }, 150); // Frame evaluations execution ticks every 150ms for performance safety profiles
+            }
+
+            predictFrame();
+        }
+    </script>
 </body>
 </html>
+          
