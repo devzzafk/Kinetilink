@@ -1,756 +1,472 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>JuneVerse — SonicLedger Assistive Navigation Suite</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  
-  :root {
-    --bg-main:       #080c14;
-    --bg-surface:    #0f1524;
-    --bg-card:       #172033;
-    --border-color:  #263554;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JuneVerse // SonicLedger MVP</title>
     
-    /* High Contrast Clinical Theme Colors */
-    --brand-blue:    #2563eb;
-    --brand-glow:    0 0 16px rgba(37, 99, 235, 0.4);
-    --emerald:       #10b981;
-    --emerald-glow:  0 0 16px rgba(16, 185, 129, 0.4);
-    --amber:         #f59e0b;
-    --amber-glow:    0 0 16px rgba(245, 158, 11, 0.4);
-    --crimson:       #ef4444;
-    --crimson-glow:  0 0 20px rgba(239, 68, 68, 0.6);
-    
-    --text-primary:  #f9fafb;
-    --text-secondary:#9ca3af;
-    --text-muted:    #4b5563;
-    
-    --font-sans:     'Inter', sans-serif;
-    --font-mono:     'JetBrains Mono', monospace;
-  }
+    <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
 
-  html, body { width: 100%; height: 100%; background: var(--bg-main); color: var(--text-primary); font-family: var(--font-sans); overflow: hidden; }
+    <style>
+        :root {
+            --bg-dark: #0d0f12;
+            --bg-panel: #14181f;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #242b35;
+        }
 
-  /* MASTER HEADER BLOCK */
-  #app-header {
-    position: relative; z-index: 10; height: 64px;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 24px; border-bottom: 1px solid var(--border-color);
-    background: var(--bg-surface);
-  }
-  .brand-group { display: flex; align-items: center; gap: 12px; }
-  .brand-logo {
-    width: 32px; height: 32px; background: var(--brand-blue);
-    border-radius: 6px; display: flex; align-items: center; justify-content: center;
-    box-shadow: var(--brand-glow);
-  }
-  .brand-logo svg { width: 18px; height: 18px; stroke: #ffffff; fill: none; }
-  .brand-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.025em; }
-  .brand-subtitle { font-size: 0.72rem; color: #6366f1; font-weight: 600; margin-top: 1px; text-transform: uppercase; letter-spacing: 0.05em; }
-  
-  .system-meta { display: flex; align-items: center; gap: 12px; }
-  .meta-badge { font-family: var(--font-mono); font-size: 0.7rem; padding: 4px 10px; background: #111c30; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-secondary); }
-  #sys-status-indicator { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); display: inline-block; }
-  .status-dot.active { background: var(--emerald); box-shadow: var(--emerald-glow); animation: pulse 2s infinite; }
-  @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-  /* TWO-COLUMN ENTERPRISE GRID */
-  #dashboard-main { display: grid; grid-template-columns: 660px 1fr; height: calc(100vh - 64px); }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            padding: 2rem;
+            min-height: 100vh;
+        }
 
-  /* TELEMETRY ENGINE VIEWPORT */
-  #viewport-container { position: relative; background: #000000; overflow: hidden; border-right: 1px solid var(--border-color); }
-  #cam-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-  #cam-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-  
-  /* SCANNING BOUNDARY OVERLAYS */
-  .lane-separator { height: 100%; width: 1px; background: rgba(255, 255, 255, 0.12); position: absolute; z-index: 2; border-left: 1px dashed rgba(255,255,255,0.08); }
-  #sep-1 { left: 33.33%; } #sep-2 { left: 66.66%; }
-  .lane-header { position: absolute; top: 16px; font-family: var(--font-sans); font-weight: 600; font-size: 0.7rem; color: rgba(255, 255, 255, 0.3); width: 33.33%; text-align: center; letter-spacing: 0.05em; z-index: 3; }
-  #hdr-left { left: 0%; } #hdr-center { left: 33.33%; } #hdr-right { left: 66.66%; }
-  
-  #navigation-strip { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px 20px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 14px; z-index: 10; }
-  #nav-status-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--brand-blue); box-shadow: var(--brand-glow); flex-shrink: 0; transition: background-color 0.1s; }
-  #nav-instruction-text { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
-  
-  /* DEPLOYMENT PROGRESS OVERLAY */
-  #system-loader { position: absolute; inset: 0; background: var(--bg-main); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 100; }
-  .spinner { width: 42px; height: 42px; border: 3px solid rgba(37, 99, 235, 0.1); border-top-color: var(--brand-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #system-loader p { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); letter-spacing: 0.02em; }
-  #system-loader small { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); }
-  
-  #alert-perimeter { position: absolute; inset: 0; pointer-events: none; border: 0px solid transparent; transition: border-width 0.1s, border-color 0.1s, background-color 0.1s; z-index: 40; }
-  #alert-perimeter.triggered { border: 8px solid var(--crimson); background: rgba(239, 68, 68, 0.15); }
-  
-  /* LATERAL VERTICAL METRIC BARS */
-  #proximity-index { position: absolute; top: 40px; right: 16px; width: 10px; height: calc(100% - 120px); background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; z-index: 10; }
-  #proximity-depth-fill { position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, var(--crimson), var(--amber), var(--brand-blue)); transition: height 0.1s ease; height: 0%; }
-  #proximity-tag { position: absolute; top: 40px; right: 32px; font-size: 0.58rem; font-weight: 700; color: var(--text-secondary); writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.1em; z-index: 10; }
+        header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-  /* CONTROL ARCHITECTURE PANEL */
-  #control-panel { display: flex; flex-direction: column; background: var(--bg-surface); overflow: hidden; }
-  .panel-section { border-bottom: 1px solid var(--border-color); padding: 16px 24px; }
-  .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
-  
-  #matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .matrix-node { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px 12px; text-align: center; transition: all 0.15s ease; }
-  .matrix-node .node-title { font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; letter-spacing: 0.02em; }
-  .matrix-node .node-state { font-size: 0.88rem; font-weight: 700; color: var(--emerald); }
-  .matrix-node.obstructed { border-color: var(--crimson); background: rgba(239, 68, 68, 0.05); box-shadow: inset 0 0 8px rgba(239, 68, 68, 0.1); }
-  .matrix-node.obstructed .node-state { color: var(--crimson); }
-  
-  /* UNIQUE ENVIRONMENTAL TELEMETRY CARDS */
-  #assistive-features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .feat-card { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
-  .feat-meta-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); }
-  .feat-meta-val { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--brand-blue); }
-  .feat-meta-val.warn { color: var(--amber); }
+        header h1 {
+            font-size: 1.8rem;
+            letter-spacing: -0.05em;
+            color: var(--text-main);
+        }
 
-  #telemetry-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 10px 24px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
-  .telemetry-datapoint { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-secondary); }
-  .telemetry-datapoint span { color: var(--brand-blue); font-weight: 600; }
-  
-  #comms-bus { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--border-color); background: #131b2e; }
-  #comms-indicator { width: 24px; height: 24px; flex-shrink: 0; border-radius: 4px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; }
-  #comms-indicator.active { background: rgba(37, 99, 235, 0.2); border-color: var(--brand-blue); animation: audioPulse 0.5s infinite alternate; }
-  @keyframes audioPulse { from { opacity: 0.7; } to { opacity: 1; } }
-  #comms-output-string { font-size: 0.78rem; font-weight: 600; color: #60a5fa; line-height: 1.4; }
-  #comms-output-string.stale { color: var(--text-muted); font-weight: 400; }
-  
-  #terminal-logger-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
-  #terminal-logger { flex: 1; overflow-y: auto; padding: 12px 24px; font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.6; background: #0b101a; }
-  .log-row { display: flex; gap: 12px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.01); }
-  .log-time { color: var(--text-muted); flex-shrink: 0; }
-  .log-tag { font-weight: 600; color: var(--brand-blue); }
-  .log-tag.alert { color: var(--crimson); }
-  .log-tag.intercept { color: var(--amber); }
-  .log-msg { color: var(--text-primary); }
-  .log-msg.system { color: #6b7280; font-style: italic; }
-  .log-msg.network { color: var(--emerald); }
-  
-  #node-ledger-panel { padding: 14px 24px; background: #0c1221; border-top: 1px solid var(--border-color); flex-shrink: 0; }
-  #node-identifier { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px; }
-  #node-identifier span { color: var(--text-secondary); }
-  #ledger-balance-row { display: flex; align-items: center; justify-content: space-between; }
-  .ledger-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); }
-  .ledger-value { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700; color: var(--emerald); }
+        header h1 span {
+            color: var(--accent-green);
+        }
 
-  /* BROWSER INTERACTION AUDIO GATE */
-  #interaction-gate {
-    position: fixed; inset: 0; background: var(--bg-main); z-index: 9999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
-  }
-  #interaction-gate h2 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-primary); }
-  #interaction-gate p { font-size: 0.85rem; color: var(--text-secondary); text-align: center; max-width: 460px; line-height: 1.6; padding: 0 24px; }
-  #gate-auth-btn {
-    padding: 14px 36px; background: var(--brand-blue); border: none; border-radius: 6px;
-    color: #ffffff; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.15s;
-    box-shadow: var(--brand-glow); letter-spacing: 0.02em;
-  }
-  #gate-auth-btn:hover { background: #1d4ed8; }
-  #gate-diagnostics { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); text-align: center; }
-  #gate-diagnostics span { color: var(--amber); }
-</style>
+        .tagline {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 968px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Live Perception Camera View Container */
+        .viewfinder-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror view for natural interaction */
+        }
+
+        /* Lane Overlay Markers for Demo Visualization */
+        .lane-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            pointer-events: none;
+        }
+
+        .lane {
+            flex: 1;
+            border-left: 1px dashed rgba(255, 255, 255, 0.1);
+            border-right: 1px dashed rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .lane::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3);
+            text-transform: uppercase;
+        }
+
+        .lane.active-block {
+            background-color: rgba(239, 68, 68, 0.15);
+            border: 1px solid #ef4444;
+        }
+
+        /* Web3 Status and Terminal Fields */
+        .web3-metric-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            color: var(--accent-green);
+            word-break: break-all;
+            text-align: right;
+            padding-left: 1rem;
+        }
+
+        .terminal-box {
+            background-color: #080a0d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            height: 220px;
+            overflow-y: auto;
+            color: #34d399;
+            flex-grow: 1;
+        }
+
+        .terminal-line {
+            margin-bottom: 0.4rem;
+            line-height: 1.4;
+        }
+
+        .terminal-timestamp {
+            color: var(--text-muted);
+            margin-right: 0.5rem;
+        }
+
+        /* UI Action Buttons */
+        .btn {
+            background-color: var(--accent-green);
+            color: #000;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            margin-top: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Simulation Buttons for Prototype presentation mapping */
+        .sim-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-sim {
+            background: #1e2530;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .btn-sim:hover {
+            background: var(--accent-blue);
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
 
-<header id="app-header">
-  <div class="brand-group">
-    <div class="brand-logo">
-      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-        <path d="M12 6v6l4 2"/>
-      </svg>
-    </div>
-    <div>
-      <div class="brand-title">JuneVerse</div>
-      <div class="brand-subtitle">SonicLedger Assistive Navigation Suite</div>
-    </div>
-  </div>
-  <div class="system-meta">
-    <div class="meta-badge">INTERRUPT_MODE_ACTIVE</div>
-    <div class="meta-badge">TF.js 4.17 Core</div>
-    <div id="sys-status-indicator"><div class="status-dot" id="sys-dot"></div><span>ENGINE OFFLINE</span></div>
-  </div>
-</header>
-
-<div id="dashboard-main">
-  <div id="viewport-container">
-    <video id="cam-video" autoplay muted playsinline></video>
-    <canvas id="cam-canvas"></canvas>
-    <div id="lane-mask-overlay">
-      <div class="lane-separator" id="sep-1"></div>
-      <div class="lane-separator" id="sep-2"></div>
-      <div class="lane-header" id="hdr-left">LEFT MATRIX</div>
-      <div class="lane-header" id="hdr-center">CENTER INTERCEPT</div>
-      <div class="lane-header" id="hdr-right">RIGHT MATRIX</div>
-    </div>
-    <div id="proximity-index"><div id="proximity-depth-fill"></div></div>
-    <div id="proximity-tag">PROXIMITY VALUE</div>
-    <div id="alert-perimeter"></div>
-    <div id="navigation-strip">
-      <div id="nav-status-indicator"></div>
-      <div id="nav-instruction-text">BOOTING TELEMETRY STACKS...</div>
-    </div>
-    <div id="system-loader">
-      <div class="spinner"></div>
-      <p>MAPPING COMPUTER VISION MODEL MATRIX</p>
-      <small>Local Sandbox Execution · Allocating Realtime Buffers</small>
-    </div>
-  </div>
-
-  <div id="control-panel">
-    <div class="panel-section">
-      <div class="section-label">Realtime Spatial Telemetry Channels</div>
-      <div id="matrix-grid">
-        <div class="matrix-node clear" id="node-left"><div class="node-title">LEFT PATHWAY</div><div class="node-state" id="lbl-left">NOMINAL</div></div>
-        <div class="matrix-node clear" id="node-center"><div class="node-title">CENTER PATHWAY</div><div class="node-state" id="lbl-center">NOMINAL</div></div>
-        <div class="matrix-node clear" id="node-right"><div class="node-title">RIGHT PATHWAY</div><div class="node-state" id="lbl-right">NOMINAL</div></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="section-label">Unique Assistive Environment Diagnostics</div>
-      <div id="assistive-features-grid">
-        <div class="feat-card">
-          <span class="feat-meta-label">Spatial Enclosure Density</span>
-          <span class="feat-meta-val" id="val-enclosure">OPEN SPACE</span>
+    <header>
+        <div>
+            <h1>JuneVerse // <span>SonicLedger</span></h1>
+            <div class="tagline">RESEARCH • INNOVATE • TECHNOLOGY</div>
         </div>
-        <div class="feat-card">
-          <span class="feat-meta-label">Ambient Exposure Index</span>
-          <span class="feat-meta-val" id="val-ambient">STABLE</span>
+        <div class="tagline" id="live-time">SYS: ACTIVE</div>
+    </header>
+
+    <main class="dashboard-grid">
+        <div class="panel">
+            <div class="panel-title">
+                LIVE PERCEPTION ENVIRONMENT
+                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• MODEL STANDBY</span>
+            </div>
+            
+            <div class="viewfinder-container">
+                <video id="webcam" autoplay playsinline muted></video>
+                <div class="lane-overlay">
+                    <div class="lane" id="lane-left" data-label="Left Lane"></div>
+                    <div class="lane" id="lane-center" data-label="Center Path"></div>
+                    <div class="lane" id="lane-right" data-label="Right Lane"></div>
+                </div>
+            </div>
+
+            <button class="btn" id="btn-init">INITIALIZE AUDIO & SYSTEM PERCEPTION</button>
+            
+            <div style="margin-top: 1.5rem;">
+                <div class="tagline" style="margin-bottom: 0.5rem;">PROTOTYPE PRESENTATION MAP SIMULATORS:</div>
+                <div class="sim-controls">
+                    <button class="btn-sim" onclick="simulateObstacle('chair')">Simulate Chair</button>
+                    <button class="btn-sim" onclick="simulateObstacle('scooter')">Simulate Scooter</button>
+                    <button class="btn-sim" onclick="clearSimulation()">Clear Path</button>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-    
-    <div id="telemetry-bar">
-      <div class="telemetry-datapoint">ENGINE FPS: <span id="val-fps">0.0</span></div>
-      <div class="telemetry-datapoint">TARGET COUNTER: <span id="val-objects">0</span></div>
-      <div class="telemetry-datapoint">CENTER THREATS: <span id="val-hazards">0</span></div>
-      <div class="telemetry-datapoint">ACCURACY INDEX: <span id="val-conf">--%</span></div>
-      <div class="telemetry-datapoint">FRAME CYCLE: #<span id="val-frames">0</span></div>
-    </div>
-    
-    <div id="comms-bus">
-      <div id="comms-indicator">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-        </svg>
-      </div>
-      <div id="comms-output-string" class="stale">AUDIO OUTPUT STANDBY — LOW LATENCY PASSIVE STREAM</div>
-    </div>
-    
-    <div id="terminal-logger-wrap">
-      <div class="panel-section" style="flex-shrink:0; padding-bottom:4px; border-bottom:none;">
-        <div class="section-label">Hardware Event Log Realtime Loop</div>
-      </div>
-      <div id="terminal-logger"></div>
-    </div>
-    
-    <div id="node-ledger-panel">
-      <div class="section-label" style="margin-bottom:6px;">Decentralized Infrastructure Verification Node</div>
-      <div id="node-identifier">NODE KEY: <span id="val-node-key">initializing secure keys...</span></div>
-      <div id="ledger-balance-row">
-        <div class="ledger-label">DATA POOL COMPENSATION METRIC</div>
-        <div class="ledger-value" id="val-token-balance">0.00 JNV</div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<div id="interaction-gate">
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5">
-    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-  </svg>
-  <h2>Initialize JuneVerse Audio Core</h2>
-  <p>To support immediate zero-delay navigation cues for visually impaired operators, browsers require explicit user acknowledgment to unlock high-priority client-side audio streams.</p>
-  <button id="gate-auth-btn" onclick="authorizeAudioBus()">INITIALIZE ZERO-DELAY PIPELINE</button>
-  <div id="gate-diagnostics">Platform Voices Found: <span id="diag-count">scanning...</span> &nbsp;|&nbsp; Current Driver: <span id="diag-engine">scanning...</span></div>
-</div>
+        <div class="panel">
+            <div class="panel-title">DECENTRALIZED ACCESS PRIVILEGE LEDGER</div>
+            
+            <div class="web3-metric-card">
+                <div class="metric-row">
+                    <span>Decentralized Wallet Node:</span>
+                    <span class="metric-value" id="wallet-addr">Uninitialized</span>
+                </div>
+                <div class="metric-row">
+                    <span>Token Allocation Balance:</span>
+                    <span class="metric-value" id="wallet-bal">0.00 JNV</span>
+                </div>
+                <div class="metric-row">
+                    <span>Validated Environment Block:</span>
+                    <span class="metric-value" id="ledger-block">#749,210</span>
+                </div>
+            </div>
 
-<script>
-// ═══════════════════════════════════════════════════
-//  JUNEVERSE ASSISTIVE ENGINE CORE ARCHITECTURE
-// ═══════════════════════════════════════════════════
+            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ACCOUNTABILITY & DATA RECORD</div>
+            <div class="terminal-box" id="terminal">
+                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span>Awaiting peripheral boot pipeline initialization sequences...</div>
+            </div>
 
-const video         = document.getElementById('cam-video');
-const canvas        = document.getElementById('cam-canvas');
-const ctx           = canvas.getContext('2d');
-const loader        = document.getElementById('system-loader');
-const pathText      = document.getElementById('nav-instruction-text');
-const pathIndicator = document.getElementById('nav-status-indicator');
-const dangerPerim   = document.getElementById('alert-perimeter');
-const speechText    = document.getElementById('comms-output-string');
-const speechIcon    = document.getElementById('comms-indicator');
-const termLogger    = document.getElementById('terminal-logger');
-const valFps        = document.getElementById('val-fps');
-const valObjects    = document.getElementById('val-objects');
-const valHazards    = document.getElementById('val-hazards');
-const valConf       = document.getElementById('val-conf');
-const valFrames     = document.getElementById('val-frames');
-const lblLeft       = document.getElementById('lbl-left');
-const lblCenter     = document.getElementById('lbl-center');
-const lblRight      = document.getElementById('lbl-right');
-const nodeLeft      = document.getElementById('node-left');
-const nodeCenter    = document.getElementById('node-center');
-const nodeRight     = document.getElementById('node-right');
-const tokenBalance  = document.getElementById('val-token-balance');
-const depthFill     = document.getElementById('proximity-depth-fill');
-const sysStatusVal  = document.getElementById('sys-status-indicator');
-const sysDot        = document.getElementById('sys-dot');
-const nodeKey       = document.getElementById('val-node-key');
+            <button class="btn btn-secondary" id="btn-verify" onclick="manualBlockVerification()">MANUALLY BROADCAST CLEAR PATH NODE (+5 JNV)</button>
+        </div>
+    </main>
 
-const valEnclosure  = document.getElementById('val-enclosure');
-const valAmbient    = document.getElementById('val-ambient');
+    <script>
+        // System variables
+        let web3;
+        let userWalletAddress;
+        let tokenBalance = 0.00;
+        let currentBlockNumber = 749210;
+        const synth = window.speechSynthesis;
+        let mockDetectionInterval;
 
-// ── Application System State Engine ──────────────────
-let model            = null;
-let detectionRunning = false;
-let lastSpeechTime    = 0;
-let lastSpokenMsg     = '';
-const THROTTLE_MS    = 4000; 
-let jnvTokens        = 0;
-let frameIdx         = 0;
-let lastFrameTime    = performance.now();
-let fpsBuffer        = [];
-let audioEnabled     = false;
-let rafHandle        = null;
-let clearCenterFrames= 0;
+        // Initialize UI Elements
+        const terminal = document.getElementById('terminal');
+        const btnInit = document.getElementById('btn-init');
+        const statusBadge = document.getElementById('status-badge');
 
-// Native Synthetic Audio Beep Generator for Proximity Warnings
-let audioCtx         = null;
+        // Log printing engine to the localized UI Terminal window
+        function logToTerminal(sender, message) {
+            const time = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.innerHTML = `<span class="terminal-timestamp">[${time}] (${sender})</span> ${message}`;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
 
-const LANE_L = 0.3333;
-const LANE_R = 0.6666;
-const CONF   = 0.50; 
+        // Initialize Web3 Client-Side simulation & Core Cryptographic Addresses
+        function initWeb3Mock() {
+            try {
+                // Instantiating Web3 Library structure safely
+                web3 = new Web3();
+                // Generate secure keypair locally
+                const account = web3.eth.accounts.create();
+                userWalletAddress = account.address;
+                
+                document.getElementById('wallet-addr').innerText = userWalletAddress.substring(0,6) + "..." + userWalletAddress.substring(36);
+                document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
+                logToTerminal("WEB3", `Local node wallet successfully generated: ${userWalletAddress}`);
+            } catch (err) {
+                console.error("Web3 init error, defaulting to local fallback", err);
+                document.getElementById('wallet-addr').innerText = "0x71C...B29";
+            }
+        }
 
-// ── Secure Hardware Identification Hashing ────────────
-(function generateNodeHash(){
-  let addr = '0x';
-  const hexChars = '0123456789ABCDEF';
-  for(let i=0; i<40; i++) addr += hexChars[Math.floor(Math.random()*16)];
-  nodeKey.textContent = addr.substring(0,8) + '...' + addr.substring(34);
-})();
+        // Initialize Camera streams natively securely
+        async function initCamera() {
+            const video = document.getElementById('webcam');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                video.srcObject = stream;
+                logToTerminal("HARDWARE", "System webcam interface feed compiled successfully.");
+            } catch (err) {
+                logToTerminal("ERROR", "Access to device optical sensor array denied or missing.");
+                alert("Camera permission required to display live evaluation grid.");
+            }
+        }
 
-// ── Voice Synthesis Configuration Modules ────────────
-let preferredVoice = null;
-const AUDIO_NODES = [
-  'google uk english female',
-  'microsoft jenny online (natural)',
-  'samantha',
-  'hazel',
-  'google us english',
-  'female'
-];
+        // Initialize core process loops on button interact
+        btnInit.addEventListener('click', async () => {
+            // Trigger an explicit audio profile activation to satisfy modern browser security restrictions
+            const unlockUtterance = new SpeechSynthesisUtterance("System active.");
+            unlockUtterance.volume = 0; 
+            synth.speak(unlockUtterance);
 
-function selectVoiceNode() {
-  const allVoices = speechSynthesis.getVoices();
-  const enVoices = allVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
-  for (const identifier of AUDIO_NODES) {
-    const matchedNode = enVoices.find(v => v.name.toLowerCase().includes(identifier));
-    if (matchedNode) return matchedNode;
-  }
-  return enVoices[0] || allVoices[0] || null;
-}
+            btnInit.innerText = "PERCEPTION ACTIVE";
+            btnInit.style.backgroundColor = "#1e2530";
+            btnInit.style.color = var(--text-muted);
+            btnInit.disabled = true;
 
-function processDiagnostics() {
-  const currentStack = speechSynthesis.getVoices();
-  preferredVoice = selectVoiceNode();
-  document.getElementById('diag-count').textContent = currentStack.length;
-  document.getElementById('diag-engine').textContent = preferredVoice ? preferredVoice.name : 'System Fallback Profile';
-}
+            statusBadge.innerText = "• SYSTEM DEPLOYED";
+            statusBadge.style.color = "var(--accent-green)";
 
-speechSynthesis.onvoiceschanged = processDiagnostics;
-setTimeout(processDiagnostics, 300);
+            initWeb3Mock();
+            await initCamera();
+            
+            logToTerminal("SYSTEM", "Dynamic Audio Guidance logic running on passive orientation matrix loop.");
+        });
 
-// ── Interactive Core Activation Gateway ───────────────
-function authorizeAudioBus() {
-  const gateElement = document.getElementById('interaction-gate');
-  gateElement.style.opacity = '0';
-  gateElement.style.transition = 'opacity 0.2s ease';
-  setTimeout(() => gateElement.style.display = 'none', 200);
+        // Main Navigation Intelligent Voice Output Controller
+        function speakDirectionalGuide(objectLabel, obstructedLane, safeAction) {
+            if (synth.speaking) return; // Prevent text-to-speech stack overlap strings
 
-  audioEnabled = true;
+            let dynamicInstruction = `Notice. There is a ${objectLabel} blocking your center path. `;
+            
+            if (safeAction === 'right') {
+                dynamicInstruction += "Please shift towards your right side to maintain clear navigation space.";
+            } else if (safeAction === 'left') {
+                dynamicInstruction += "Please realign your direction to the left lane to continue safely.";
+            } else {
+                dynamicInstruction += "Alert. Surrounding alternate directions are obstructed. Please halt forward movement.";
+            }
 
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  } catch(e) {
-    console.error("AudioContext initialization failure", e);
-  }
+            const utterance = new SpeechSynthesisUtterance(dynamicInstruction);
+            utterance.rate = 0.95; // Clear human narration metric speeds
+            utterance.pitch = 1.0;
+            
+            synth.speak(utterance);
+            logToTerminal("GUIDE ENGINE", `Executed Voice Instruction: "${dynamicInstruction.substring(0, 45)}..."`);
+        }
 
-  const wakeSignal = new SpeechSynthesisUtterance('.');
-  wakeSignal.volume = 0.001;
-  speechSynthesis.speak(wakeSignal);
+        // Demo Prototype Execution Simulator: Maps objects to geometric screen partitions
+        function simulateObstacle(objectType) {
+            // Reset state views
+            clearSimulation();
+            
+            logToTerminal("PERCEPTION", `Live perception tracked obstruction target: [${objectType.toUpperCase()}]`);
+            
+            // Flag center lane element active and calculate safe output channel
+            document.getElementById('lane-center').className = 'lane active-block';
+            
+            let safeWay = 'right';
+            if (objectType === 'scooter') {
+                document.getElementById('lane-left').className = 'lane active-block'; // Block left too
+                safeWay = 'right';
+            } else {
+                document.getElementById('lane-right').className = 'lane active-block'; // Block right too
+                safeWay = 'left';
+            }
 
-  setTimeout(() => {
-    speechSynthesis.cancel();
-    dispatchAcousticCue('JuneVerse SonicLedger spatial monitoring running successfully. Deep perception engine active.', true);
-  }, 200);
-}
+            // Fire vocal alert
+            speakDirectionalGuide(objectType, 'center', safeWay);
 
-// ── Zero-Latency Audio Radar Echo Simulator ─────────
-let lastBeepTime = 0;
-function triggerHapticEcho(proximityValue) {
-  if (!audioCtx || !audioEnabled) return;
-  const now = Date.now();
-  
-  let interval = 800;
-  if (proximityValue > 0.85) interval = 200;
-  else if (proximityValue > 0.70) interval = 450;
-  
-  if (now - lastBeepTime < interval) return;
-  lastBeepTime = now;
+            // Execute automated Web3 verification processing workflow pipeline updates
+            triggerAutomatedLedgerLogging(objectType, safeWay);
+        }
 
-  try {
-    const osc = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    osc.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(proximityValue > 0.85 ? 880 : 520, audioCtx.currentTime); 
-    
-    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
-    
-    osc.start(audioCtx.currentTime);
-    osc.stop(audioCtx.currentTime + 0.08);
-  } catch(e) {}
-}
+        function clearSimulation() {
+            document.getElementById('lane-left').className = 'lane';
+            document.getElementById('lane-center').className = 'lane';
+            document.getElementById('lane-right').className = 'lane';
+            logToTerminal("PERCEPTION", "Target perimeter clear. Center path safe.");
+        }
 
-// ── Instant Interrupt Speech Dispatch Pipeline ─────────
-function dispatchAcousticCue(msg, immediateForce) {
-  if (!audioEnabled) return;
-  const timestampNow = Date.now();
+        // Web3 Decentralized Settlement Simulation Scripts
+        function triggerAutomatedLedgerLogging(detectedHazard, calculatedEscapeRoute) {
+            currentBlockNumber += 1;
+            tokenBalance += 0.50; // Incentive payout allocation for processing environment computations local node
+            
+            document.getElementById('ledger-block').innerText = `#${currentBlockNumber}`;
+            document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
+            
+            logToTerminal("LEDGER", `Block #${currentBlockNumber} produced. Data payload logged: [Obstruction: ${detectedHazard}, Override: ${calculatedEscapeRoute}]`);
+        }
 
-  if (immediateForce) {
-    if (msg !== lastSpokenMsg || (timestampNow - lastSpeechTime > 800)) {
-      speechSynthesis.cancel(); 
-      const timeStr = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      const logRow = document.createElement('div');
-      logRow.className = 'log-row';
-      logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-tag intercept">[INTERRUPT]</span><span class="log-msg" style="color:var(--amber)">Zero-delay cue bypass executed. Purged speech stack.</span>`;
-      termLogger.appendChild(logRow);
-    } else {
-      return; 
-    }
-  } else {
-    if (timestampNow - lastSpeechTime < THROTTLE_MS) return;
-    if (msg === lastSpokenMsg && timestampNow - lastSpeechTime < THROTTLE_MS * 2) return;
-  }
-
-  if (!preferredVoice) preferredVoice = selectVoiceNode();
-
-  const utteranceInstance = new SpeechSynthesisUtterance(msg);
-  if (preferredVoice) utteranceInstance.voice = preferredVoice;
-  
-  utteranceInstance.rate   = 1.10;  
-  utteranceInstance.pitch  = 1.05;  
-  utteranceInstance.volume = 1.0;
-
-  utteranceInstance.onstart = () => {
-    speechIcon.classList.add('active');
-    speechText.classList.remove('stale');
-    speechText.textContent = 'BUS OUT -> ' + msg.toUpperCase();
-  };
-  utteranceInstance.onend = utteranceInstance.onerror = () => {
-    speechIcon.classList.remove('active');
-    speechText.classList.add('stale');
-    speechText.textContent = 'AUDIO OUTPUT STANDBY — LOW LATENCY PASSIVE STREAM';
-  };
-
-  speechSynthesis.speak(utteranceInstance);
-  lastSpeechTime = timestampNow;
-  lastSpokenMsg  = msg;
-}
-
-// ── Logging Interface Controller ─────────────────────
-function writeConsoleLog(objectLabel, sectorName, validationScore, structuralFlag, initializationFlag) {
-  const timeStr = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const logRow = document.createElement('div');
-  logRow.className = 'log-row';
-  
-  if (initializationFlag) {
-    logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg system">[SYS_BOOT] ${objectLabel}</span>`;
-  } else if (structuralFlag) {
-    logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg network">[NET_VERIFY] ${objectLabel}</span>`;
-  } else {
-    const dangerActive = sectorName === 'CENTER INTERCEPT';
-    logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-tag${dangerActive?' alert':''}">[TRACK_ID]</span><span class="log-msg">Target '${objectLabel.toUpperCase()}' bound to ${sectorName} at ${(validationScore*100).toFixed(0)}% accuracy.</span>`;
-  }
-  termLogger.appendChild(logRow);
-  while (termLogger.children.length > 40) termLogger.removeChild(termLogger.firstChild);
-  termLogger.scrollTop = termLogger.scrollHeight;
-}
-
-// ── Native Hardware Initialization Stream ────────────
-async function activateVideoArray() {
-  // Configured to dynamically pull back environmental camera on supporting phone hardware
-  const mediaStream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'environment' }, audio: false
-  });
-  video.srcObject = mediaStream;
-  return new Promise(resolve => {
-    video.onloadedmetadata = () => { video.play(); resolve(); };
-  });
-}
-
-function processTargetLane(centerX, viewportWidth) {
-  const normalX = (centerX / viewportWidth); 
-  if (normalX < LANE_L) return 'LEFT';
-  if (normalX < LANE_R) return 'CENTER';
-  return 'RIGHT';
-}
-
-function processTargetProximity(yBound, heightBound, totalHeight) {
-  return Math.min(1, (yBound + heightBound) / totalHeight);
-}
-
-// ── Ambient Light Calculation Engine ────────────
-function calculateAmbientExposure(width, height) {
-  try {
-    const frameData = ctx.getImageData(0, 0, width, height).data;
-    let brightnessSum = 0;
-    for (let i = 0; i < frameData.length; i += 40) {
-      brightnessSum += (frameData[i] + frameData[i+1] + frameData[i+2]) / 3;
-    }
-    const meanBrightness = brightnessSum / (frameData.length / 40);
-    
-    if (meanBrightness < 35) {
-      valAmbient.textContent = 'LOW LIGHT ENVIRONMENT';
-      valAmbient.className = 'feat-meta-val warn';
-      return 'dark';
-    } else if (meanBrightness > 220) {
-      valAmbient.textContent = 'HIGH GLARE RISK';
-      valAmbient.className = 'feat-meta-val warn';
-      return 'glare';
-    } else {
-      valAmbient.textContent = 'STABLE LUMINANCE';
-      valAmbient.className = 'feat-meta-val';
-      return 'stable';
-    }
-  } catch(e) { return 'stable'; }
-}
-
-// ── Architectural Frame Rendering Matrix ──────────
-function drawVectorMatrix(detections, canvasWidth, canvasHeight) {
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.01)';
-  ctx.fillRect(0, 0, canvasWidth * LANE_L, canvasHeight);
-  ctx.fillStyle = 'rgba(255,255,255,0.02)';
-  ctx.fillRect(canvasWidth * LANE_L, 0, canvasWidth * (LANE_R - LANE_L), canvasHeight);
-  ctx.fillStyle = 'rgba(255,255,255,0.01)';
-  ctx.fillRect(canvasWidth * LANE_R, 0, canvasWidth * (1 - LANE_R), canvasHeight);
-
-  for (const item of detections) {
-    const [x, y, w, h] = item.bbox;
-    const assignedLane = processTargetLane(x + w/2, canvasWidth);
-    const calculatedProx = processTargetProximity(y, h, canvasHeight);
-
-    let diagnosticColor = '#2563eb'; 
-    if (assignedLane === 'CENTER' && calculatedProx > 0.65) diagnosticColor = '#ef4444';
-    else if (assignedLane === 'CENTER' || calculatedProx > 0.65) diagnosticColor = '#f59e0b';
-
-    ctx.save();
-    ctx.strokeStyle = diagnosticColor; 
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    ctx.fillStyle = diagnosticColor;
-    ctx.fillRect(x, y - 18, Math.max(w, 130), 18);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 10px JetBrains Mono, monospace';
-    ctx.fillText(`${item.class.toUpperCase()} [${(calculatedProx*100).toFixed(0)}% DIST]`, x + 6, y - 5);
-    ctx.restore();
-  }
-}
-
-function processInterfaceMatrix(leftBlock, centerBlock, rightBlock) {
-  function applyNodeState(nodeContainer, labelElement, stateIsObstructed) {
-    nodeContainer.className = 'matrix-node ' + (stateIsObstructed ? 'obstructed' : 'clear');
-    labelElement.textContent = stateIsObstructed ? 'OBSTRUCTED' : 'NOMINAL';
-  }
-  applyNodeState(nodeLeft, lblLeft, leftBlock);
-  applyNodeState(nodeCenter, lblCenter, centerBlock);
-  applyNodeState(nodeRight, lblRight, rightBlock);
-}
-
-function commitLedgerValidation() {
-  jnvTokens += 0.50;
-  tokenBalance.textContent = jnvTokens.toFixed(2) + ' JNV';
-  writeConsoleLog('Data network validation loop completed. Reward credited (+0.50 JNV).', '', 0, true, false);
-}
-
-// ── Spatial Engine Logic Calculations ──────────────────
-let historicalBuffer = new Set();
-let ambientCheckCounter = 0;
-
-function interpretSpatialArray(predictions) {
-  const widthBoundary = canvas.width;
-  const heightBoundary = canvas.height;
-  const filteredDetections = predictions.filter(p => p.score >= CONF);
-
-  let leftLoom = false, centerLoom = false, rightLoom = false;
-  let highestProxSeen = 0, validationAccumulator = 0, hazardsCounter = 0;
-  const localTrackingMap = new Set();
-
-  ambientCheckCounter++;
-  if (ambientCheckCounter % 10 === 0) {
-    const ambientState = calculateAmbientExposure(widthBoundary, heightBoundary);
-    if (ambientState === 'dark') dispatchAcousticCue('Ambient exposure alert. Low visibility lighting encountered.');
-    if (ambientState === 'glare') dispatchAcousticCue('Visual capture alert. Blinding light flare observed.');
-  }
-
-  if (filteredDetections.length >= 4) {
-    valEnclosure.textContent = 'HIGH ENCLOSURE (CONFINED)';
-    valEnclosure.className = 'feat-meta-val warn';
-  } else {
-    valEnclosure.textContent = 'OPEN PATH';
-    valEnclosure.className = 'feat-meta-val';
-  }
-
-  for (const object of filteredDetections) {
-    const [x, y, w, h] = object.bbox;
-    const targetedSector = processTargetLane(x + w/2, widthBoundary);
-    const computedDepth  = processTargetProximity(y, h, heightBoundary);
-
-    validationAccumulator += object.score;
-    localTrackingMap.add(object.class);
-
-    if (computedDepth > highestProxSeen) {
-      highestProxSeen = computedDepth;
-    }
-
-    if (targetedSector === 'LEFT') leftLoom = true;
-    if (targetedSector === 'RIGHT') rightLoom = true;
-    
-    if (targetedSector === 'CENTER') {
-      centerLoom = true;
-      hazardsCounter++;
-      
-      if (computedDepth > 0.65) {
-        triggerHapticEcho(computedDepth);
-        dispatchAcousticCue(`Stop. Structural hazard ${object.class} approaching directly in center path.`, true);
-      }
-    }
-
-    if (!historicalBuffer.has(object.class)) {
-      writeConsoleLog(object.class, targetedSector === 'CENTER' ? 'CENTER INTERCEPT' : `${targetedSector} MATRIX`, object.score, false, false);
-      commitLedgerValidation();
-    }
-  }
-
-  historicalBuffer = localTrackingMap;
-
-  // Real-Time System UI Status Processing
-  valObjects.textContent = filteredDetections.length;
-  valHazards.textContent = hazardsCounter;
-  valConf.textContent = filteredDetections.length > 0 ? ((validationAccumulator / filteredDetections.length) * 100).toFixed(0) + '%' : '--%';
-  depthFill.style.height = `${highestProxSeen * 100}%`;
-
-  processInterfaceMatrix(leftLoom, centerLoom, rightLoom);
-
-  if (centerLoom) {
-    clearCenterFrames = 0;
-    dangerPerim.className = highestProxSeen > 0.65 ? 'triggered' : '';
-    pathIndicator.style.backgroundColor = 'var(--crimson)';
-    pathIndicator.style.boxShadow = 'var(--crimson-glow)';
-  } else {
-    clearCenterFrames++;
-    dangerPerim.className = '';
-    if (clearCenterFrames > 5) {
-      pathIndicator.style.backgroundColor = 'var(--emerald)';
-      pathIndicator.style.boxShadow = 'var(--emerald-glow)';
-      
-      if (leftLoom && !rightLoom) {
-        pathText.textContent = 'CENTER PATH IS CLEAR. OBSTACLE LOOMING ON LEFT. VEER RIGHT.';
-        dispatchAcousticCue('Center clear. Hazard noted on left. Clear to steer right.');
-      } else if (rightLoom && !leftLoom) {
-        pathText.textContent = 'CENTER PATH IS CLEAR. OBSTACLE LOOMING ON RIGHT. VEER LEFT.';
-        dispatchAcousticCue('Center clear. Hazard noted on right. Clear to steer left.');
-      } else if (leftLoom && rightLoom) {
-        pathText.textContent = 'NARROW SEGMENT ENCOUNTERED. MAINTAIN RECTILINEAR CENTER TRAJECTORY.';
-        dispatchAcousticCue('Narrow gap ahead. Keep moving straight.');
-      } else {
-        pathText.textContent = 'ALL CHANNELS CLEAR. PROCEED FORWARD NOMINAL PACE.';
-        dispatchAcousticCue('All directions clear. Proceed straight.');
-      }
-    }
-  }
-}
-
-// ── Computational Engine Frame Loop ──────────────────
-async function processExecutionWire() {
-  if (!detectionRunning) return;
-
-  frameIdx++;
-  valFrames.textContent = frameIdx;
-
-  const now = performance.now();
-  const fps = 1000 / (now - lastFrameTime);
-  lastFrameTime = now;
-  fpsBuffer.push(fps);
-  if (fpsBuffer.length > 20) fpsBuffer.shift();
-  const avgFps = fpsBuffer.reduce((a, b) => a + b, 0) / fpsBuffer.length;
-  valFps.textContent = avgFps.toFixed(1);
-
-  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    writeConsoleLog(`Telemetry bounds calibrated: [${canvas.width}x${canvas.height}] px`, '', 0, false, true);
-  }
-
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  try {
-    const rawPredictions = await model.detect(video);
-    drawVectorMatrix(rawPredictions, canvas.width, canvas.height);
-    interpretSpatialArray(rawPredictions);
-  } catch (err) {
-    console.error("Frame evaluation failure", err);
-  }
-
-  rafHandle = requestAnimationFrame(processExecutionWire);
-}
-
-// ── Orchestrated Bootstrap Operations ─────────────────
-async function bootstrapSystemSuite() {
-  writeConsoleLog('Spinning up localized sandboxed neural architecture instances...', '', 0, false, true);
-  try {
-    await activateVideoArray();
-    writeConsoleLog('Camera environmental array initialized successfully.', '', 0, false, true);
-    
-    model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
-    writeConsoleLog('COCO-SSD Lite system model downloaded into local thread runtime.', '', 0, false, true);
-    
-    loader.style.opacity = '0';
-    loader.style.transition = 'opacity 0.3s ease';
-    setTimeout(() => loader.style.display = 'none', 300);
-
-    sysDot.className = 'status-dot active';
-    sysStatusVal.querySelector('span').textContent = 'CORE ONLINE';
-    
-    detectionRunning = true;
-    rafHandle = requestAnimationFrame(processExecutionWire);
-  } catch (err) {
-    writeConsoleLog(`FATAL STACK EXCEPTION: ${err.message}`, '', 0, false, true);
-    document.querySelector('#system-loader p').textContent = 'BOOT INTERRUPTED — VERIFY CAMERA ACCESS';
-    document.querySelector('.spinner').style.borderColor = 'var(--crimson)';
-  }
-}
-
-bootstrapSystemSuite();
-</script>
+        function manualBlockVerification() {
+            if (!userWalletAddress) {
+                alert("Please initialize the system application pipeline framework first.");
+                return;
+            }
+            currentBlockNumber += 1;
+            tokenBalance += 5.00; // Payout token matrix increments
+            
+            document.getElementById('ledger-block').innerText = `#${currentBlockNumber}`;
+            document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
+            
+            logToTerminal("REWARD POOL", `Crowdsourced validation broadcast successful. Verified Clear Safe Node added to Block #${currentBlockNumber}. +5.00 JNV allocated.`);
+        }
+    </script>
 </body>
 </html>
