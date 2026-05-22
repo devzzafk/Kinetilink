@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>KinetiLink — Advanced Assistive Navigation Suite</title>
+<title>JuneVerse — SonicLedger Assistive Navigation Suite</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
@@ -170,8 +170,8 @@
       </svg>
     </div>
     <div>
-      <div class="brand-title">KinetiLink</div>
-      <div class="brand-subtitle">Ultra-Latency Assistive Navigation Array</div>
+      <div class="brand-title">JuneVerse</div>
+      <div class="brand-subtitle">SonicLedger Assistive Navigation Suite</div>
     </div>
   </div>
   <div class="system-meta">
@@ -271,7 +271,7 @@
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
     <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
   </svg>
-  <h2>Initialize KinetiLink Audio Core</h2>
+  <h2>Initialize JuneVerse Audio Core</h2>
   <p>To support immediate zero-delay navigation cues for visually impaired operators, browsers require explicit user acknowledgment to unlock high-priority client-side audio streams.</p>
   <button id="gate-auth-btn" onclick="authorizeAudioBus()">INITIALIZE ZERO-DELAY PIPELINE</button>
   <div id="gate-diagnostics">Platform Voices Found: <span id="diag-count">scanning...</span> &nbsp;|&nbsp; Current Driver: <span id="diag-engine">scanning...</span></div>
@@ -279,7 +279,7 @@
 
 <script>
 // ═══════════════════════════════════════════════════
-//  KINETILINK ASSISTIVE ENGINE ENGINE CORE
+//  JUNEVERSE ASSISTIVE ENGINE CORE ARCHITECTURE
 // ═══════════════════════════════════════════════════
 
 const video         = document.getElementById('cam-video');
@@ -309,7 +309,6 @@ const sysStatusVal  = document.getElementById('sys-status-indicator');
 const sysDot        = document.getElementById('sys-dot');
 const nodeKey       = document.getElementById('val-node-key');
 
-// Advanced Assistive Telemetry Elements
 const valEnclosure  = document.getElementById('val-enclosure');
 const valAmbient    = document.getElementById('val-ambient');
 
@@ -332,7 +331,7 @@ let audioCtx         = null;
 
 const LANE_L = 0.3333;
 const LANE_R = 0.6666;
-const CONF   = 0.50; // Precision metric verification ceiling
+const CONF   = 0.50; 
 
 // ── Secure Hardware Identification Hashing ────────────
 (function generateNodeHash(){
@@ -382,31 +381,28 @@ function authorizeAudioBus() {
 
   audioEnabled = true;
 
-  // Wake up Web Audio API Context for ultrasonic click generation
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   } catch(e) {
     console.error("AudioContext initialization failure", e);
   }
 
-  // Clear focus block constraint paths instantly
   const wakeSignal = new SpeechSynthesisUtterance('.');
   wakeSignal.volume = 0.001;
   speechSynthesis.speak(wakeSignal);
 
   setTimeout(() => {
     speechSynthesis.cancel();
-    dispatchAcousticCue('KinetiLink spatial monitoring framework running successfully. Zero delay interrupt channel is online.', true);
+    dispatchAcousticCue('JuneVerse SonicLedger spatial monitoring running successfully. Deep perception engine active.', true);
   }, 200);
 }
 
-// ── Zero-Latency Haptic Echo Simulator (Beep) ─────────
+// ── Zero-Latency Audio Radar Echo Simulator ─────────
 let lastBeepTime = 0;
 function triggerHapticEcho(proximityValue) {
   if (!audioCtx || !audioEnabled) return;
   const now = Date.now();
   
-  // Speed up click frequency as danger structural proximity increases
   let interval = 800;
   if (proximityValue > 0.85) interval = 200;
   else if (proximityValue > 0.70) interval = 450;
@@ -421,7 +417,7 @@ function triggerHapticEcho(proximityValue) {
     gainNode.connect(audioCtx.destination);
     
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(proximityValue > 0.85 ? 880 : 520, audioCtx.currentTime); // Higher pitch for critical proximity
+    osc.frequency.setValueAtTime(proximityValue > 0.85 ? 880 : 520, audioCtx.currentTime); 
     
     gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
@@ -436,20 +432,18 @@ function dispatchAcousticCue(msg, immediateForce) {
   if (!audioEnabled) return;
   const timestampNow = Date.now();
 
-  // If immediateForce is declared (e.g., center obstacle detected), purge audio buffer and execute immediately
   if (immediateForce) {
     if (msg !== lastSpokenMsg || (timestampNow - lastSpeechTime > 800)) {
-      speechSynthesis.cancel(); // HARD FLUSH OF CURRENT BUFFER
+      speechSynthesis.cancel(); 
       const timeStr = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
       const logRow = document.createElement('div');
       logRow.className = 'log-row';
       logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-tag intercept">[INTERRUPT]</span><span class="log-msg" style="color:var(--amber)">Zero-delay cue bypass executed. Purged speech stack.</span>`;
       termLogger.appendChild(logRow);
     } else {
-      return; // Anti-stutter protection loop block
+      return; 
     }
   } else {
-    // Standard system metrics pacing engine checks
     if (timestampNow - lastSpeechTime < THROTTLE_MS) return;
     if (msg === lastSpokenMsg && timestampNow - lastSpeechTime < THROTTLE_MS * 2) return;
   }
@@ -459,9 +453,8 @@ function dispatchAcousticCue(msg, immediateForce) {
   const utteranceInstance = new SpeechSynthesisUtterance(msg);
   if (preferredVoice) utteranceInstance.voice = preferredVoice;
   
-  // Custom calibrations targeted for optimal auditory parsing under noise conditions
-  utteranceInstance.rate   = 1.05;  
-  utteranceInstance.pitch  = 1.10;  
+  utteranceInstance.rate   = 1.10;  
+  utteranceInstance.pitch  = 1.05;  
   utteranceInstance.volume = 1.0;
 
   utteranceInstance.onstart = () => {
@@ -501,8 +494,9 @@ function writeConsoleLog(objectLabel, sectorName, validationScore, structuralFla
 
 // ── Native Hardware Initialization Stream ────────────
 async function activateVideoArray() {
+  // Configured to dynamically pull back environmental camera on supporting phone hardware
   const mediaStream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false
+    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'environment' }, audio: false
   });
   video.srcObject = mediaStream;
   return new Promise(resolve => {
@@ -511,7 +505,7 @@ async function activateVideoArray() {
 }
 
 function processTargetLane(centerX, viewportWidth) {
-  const normalX = 1 - (centerX / viewportWidth); // Compensate for reflected camera input matrices
+  const normalX = (centerX / viewportWidth); 
   if (normalX < LANE_L) return 'LEFT';
   if (normalX < LANE_R) return 'CENTER';
   return 'RIGHT';
@@ -521,23 +515,22 @@ function processTargetProximity(yBound, heightBound, totalHeight) {
   return Math.min(1, (yBound + heightBound) / totalHeight);
 }
 
-// ── Unique Ambient Lux Exposure Calculation ────────────
+// ── Ambient Light Calculation Engine ────────────
 function calculateAmbientExposure(width, height) {
   try {
     const frameData = ctx.getImageData(0, 0, width, height).data;
     let brightnessSum = 0;
-    // Fast skip-sampling algorithm loop for high frame efficiency
     for (let i = 0; i < frameData.length; i += 40) {
       brightnessSum += (frameData[i] + frameData[i+1] + frameData[i+2]) / 3;
     }
     const meanBrightness = brightnessSum / (frameData.length / 40);
     
     if (meanBrightness < 35) {
-      valAmbient.textContent = 'LOW EXPOSURE (DARK)';
+      valAmbient.textContent = 'LOW LIGHT ENVIRONMENT';
       valAmbient.className = 'feat-meta-val warn';
       return 'dark';
     } else if (meanBrightness > 220) {
-      valAmbient.textContent = 'HIGH EXPOSURE (GLARE)';
+      valAmbient.textContent = 'HIGH GLARE RISK';
       valAmbient.className = 'feat-meta-val warn';
       return 'glare';
     } else {
@@ -548,11 +541,10 @@ function calculateAmbientExposure(width, height) {
   } catch(e) { return 'stable'; }
 }
 
-// ── Architectural Wireframe Matrix Rendering ──────────
+// ── Architectural Frame Rendering Matrix ──────────
 function drawVectorMatrix(detections, canvasWidth, canvasHeight) {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-  // Structural column layouts
   ctx.fillStyle = 'rgba(255,255,255,0.01)';
   ctx.fillRect(0, 0, canvasWidth * LANE_L, canvasHeight);
   ctx.fillStyle = 'rgba(255,255,255,0.02)';
@@ -562,7 +554,6 @@ function drawVectorMatrix(detections, canvasWidth, canvasHeight) {
 
   for (const item of detections) {
     const [x, y, w, h] = item.bbox;
-    const flippedX = canvasWidth - x - w; 
     const assignedLane = processTargetLane(x + w/2, canvasWidth);
     const calculatedProx = processTargetProximity(y, h, canvasHeight);
 
@@ -573,15 +564,14 @@ function drawVectorMatrix(detections, canvasWidth, canvasHeight) {
     ctx.save();
     ctx.strokeStyle = diagnosticColor; 
     ctx.lineWidth = 2;
-    ctx.strokeRect(flippedX, y, w, h);
+    ctx.strokeRect(x, y, w, h);
 
-    // Text Metric Metadata Strips
     ctx.fillStyle = diagnosticColor;
-    ctx.fillRect(flippedX, y - 18, Math.max(w, 130), 18);
+    ctx.fillRect(x, y - 18, Math.max(w, 130), 18);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '700 10px JetBrains Mono, monospace';
-    ctx.fillText(`${item.class.toUpperCase()} [${(calculatedProx*100).toFixed(0)}% PROX]`, flippedX + 6, y - 5);
+    ctx.fillText(`${item.class.toUpperCase()} [${(calculatedProx*100).toFixed(0)}% DIST]`, x + 6, y - 5);
     ctx.restore();
   }
 }
@@ -599,7 +589,7 @@ function processInterfaceMatrix(leftBlock, centerBlock, rightBlock) {
 function commitLedgerValidation() {
   jnvTokens += 0.50;
   tokenBalance.textContent = jnvTokens.toFixed(2) + ' JNV';
-  writeConsoleLog('Data ecosystem verify cycle complete. Credited (+0.50 JNV).', '', 0, true, false);
+  writeConsoleLog('Data network validation loop completed. Reward credited (+0.50 JNV).', '', 0, true, false);
 }
 
 // ── Spatial Engine Logic Calculations ──────────────────
@@ -607,23 +597,21 @@ let historicalBuffer = new Set();
 let ambientCheckCounter = 0;
 
 function interpretSpatialArray(predictions) {
-  const widthBoundary = canvas.width, heightBoundary = canvas.height;
+  const widthBoundary = canvas.width;
+  const heightBoundary = canvas.height;
   const filteredDetections = predictions.filter(p => p.score >= CONF);
 
   let leftLoom = false, centerLoom = false, rightLoom = false;
   let highestProxSeen = 0, validationAccumulator = 0, hazardsCounter = 0;
   const localTrackingMap = new Set();
 
-  // Run Ambient Lux check once every 10 frames to optimize processor overhead
   ambientCheckCounter++;
   if (ambientCheckCounter % 10 === 0) {
     const ambientState = calculateAmbientExposure(widthBoundary, heightBoundary);
-    if (ambientState === 'dark') dispatchAcousticCue('Warning. Ambient light level dropped significantly. Sudden darkness detected.');
-    if (ambientState === 'glare') dispatchAcousticCue('Warning. Sudden blinding glare exposure detected.');
+    if (ambientState === 'dark') dispatchAcousticCue('Ambient exposure alert. Low visibility lighting encountered.');
+    if (ambientState === 'glare') dispatchAcousticCue('Visual capture alert. Blinding light flare observed.');
   }
 
-  // ── Enclosure Structural Density Feature ───────────
-  // Calculated via total tracking density volume indexes 
   if (filteredDetections.length >= 4) {
     valEnclosure.textContent = 'HIGH ENCLOSURE (CONFINED)';
     valEnclosure.className = 'feat-meta-val warn';
@@ -637,161 +625,132 @@ function interpretSpatialArray(predictions) {
     const targetedSector = processTargetLane(x + w/2, widthBoundary);
     const computedDepth  = processTargetProximity(y, h, heightBoundary);
 
-    if (targetedSector === 'LEFT')   leftLoom = true;
-    if (targetedSector === 'CENTER') centerLoom = true;
-    if (targetedSector === 'RIGHT')  rightLoom = true;
-
-    highestProxSeen = Math.max(highestProxSeen, computedDepth);
     validationAccumulator += object.score;
-    if (targetedSector === 'CENTER') hazardsCounter++;
+    localTrackingMap.add(object.class);
 
-    const mapIdentifierKey = object.class + '-' + targetedSector;
-    if (!historicalBuffer.has(mapIdentifierKey)) writeConsoleLog(object.class, targetedSector === 'CENTER' ? 'CENTER INTERCEPT' : targetedSector, object.score, false, false);
-    localTrackingMap.add(mapIdentifierKey);
+    if (computedDepth > highestProxSeen) {
+      highestProxSeen = computedDepth;
+    }
+
+    if (targetedSector === 'LEFT') leftLoom = true;
+    if (targetedSector === 'RIGHT') rightLoom = true;
+    
+    if (targetedSector === 'CENTER') {
+      centerLoom = true;
+      hazardsCounter++;
+      
+      if (computedDepth > 0.65) {
+        triggerHapticEcho(computedDepth);
+        dispatchAcousticCue(`Stop. Structural hazard ${object.class} approaching directly in center path.`, true);
+      }
+    }
+
+    if (!historicalBuffer.has(object.class)) {
+      writeConsoleLog(object.class, targetedSector === 'CENTER' ? 'CENTER INTERCEPT' : `${targetedSector} MATRIX`, object.score, false, false);
+      commitLedgerValidation();
+    }
   }
+
   historicalBuffer = localTrackingMap;
 
+  // Real-Time System UI Status Processing
   valObjects.textContent = filteredDetections.length;
   valHazards.textContent = hazardsCounter;
-  valConf.textContent    = filteredDetections.length ? (validationAccumulator / filteredDetections.length * 100).toFixed(0) + '%' : '--%';
-  depthFill.style.height = (highestProxSeen * 100).toFixed(0) + '%';
+  valConf.textContent = filteredDetections.length > 0 ? ((validationAccumulator / filteredDetections.length) * 100).toFixed(0) + '%' : '--%';
+  depthFill.style.height = `${highestProxSeen * 100}%`;
 
   processInterfaceMatrix(leftLoom, centerLoom, rightLoom);
-  
-  const criticalThreatLevel = centerLoom && highestProxSeen > 0.55;
-  dangerPerim.className = criticalThreatLevel ? 'triggered' : '';
 
-  // Fire echo click generators if an object steps inside dangerous proximity levels
-  if (highestProxSeen > 0.50) {
-    triggerHapticEcho(highestProxSeen);
-  }
-
-  drawVectorMatrix(filteredDetections, widthBoundary, heightBoundary);
-
-  // ── ADVANCED ACTIVE CLEAR ESCAPE ROUTE ROUTING ENGINE ──
   if (centerLoom) {
     clearCenterFrames = 0;
-    
-    // Explicitly scan alternate pathways dynamically
-    const escapeRouteLeftVerified  = !leftLoom;
-    const escapeRouteRightVerified = !rightLoom;
-    
-    const focalThreats = filteredDetections.filter(p => processTargetLane(p.bbox[0] + p.bbox[2]/2, widthBoundary) === 'CENTER').map(p => p.class);
-    const targetLabel = focalThreats[0] || 'obstacle';
-
-    if (!escapeRouteLeftVerified && !escapeRouteRightVerified) {
-      pathText.textContent = 'CRITICAL ALERT — NO STABLE ROUTE DETECTED — PAUSE FORWARD MOMENTUM';
-      pathText.style.color = 'var(--crimson)';
-      pathIndicator.style.background = 'var(--crimson)';
-      pathIndicator.style.boxShadow  = 'var(--crimson-glow)';
-      
-      // IMMEDIATE_FORCE bypasses speech queue lag instantly
-      dispatchAcousticCue(`Stop. Path blocked ahead. No clear escape route available. Pause your step now.`, true);
-    } else {
-      // Prioritize routing vectors based on active lane clearance verifications
-      let targetEscapeVector = '';
-      if (escapeRouteLeftVerified && escapeRouteRightVerified) {
-        // Both lanes clear, pick left default
-        targetEscapeVector = 'left';
-      } else {
-        targetEscapeVector = escapeRouteLeftVerified ? 'left' : 'right';
-      }
-
-      pathText.textContent = `ALERT: ${targetLabel.toUpperCase()} CLOSING — STEER TOWARDS CLEAR ${targetEscapeVector.toUpperCase()} CHANNEL`;
-      pathText.style.color = 'var(--amber)';
-      pathIndicator.style.background = 'var(--amber)';
-      pathIndicator.style.boxShadow  = 'var(--amber-glow)';
-      
-      // Clear concise physical steering commands with verified routing checks
-      dispatchAcousticCue(`${targetLabel} ahead. Clear route verified on your ${targetEscapeVector}. Step ${targetEscapeVector} now.`, true);
-    }
+    dangerPerim.className = highestProxSeen > 0.65 ? 'triggered' : '';
+    pathIndicator.style.backgroundColor = 'var(--crimson)';
+    pathIndicator.style.boxShadow = 'var(--crimson-glow)';
   } else {
     clearCenterFrames++;
-    if (clearCenterFrames > 0 && clearCenterFrames % 30 === 0) commitLedgerValidation();
-
-    if (!leftLoom && !rightLoom) {
-      pathText.textContent = 'SYSTEM PATH SECURE — RUNNING NOMINAL TRACKING LOOPS';
-      pathText.style.color = 'var(--emerald)';
-      pathIndicator.style.background = 'var(--brand-blue)';
-      pathIndicator.style.boxShadow  = 'var(--brand-glow)';
+    dangerPerim.className = '';
+    if (clearCenterFrames > 5) {
+      pathIndicator.style.backgroundColor = 'var(--emerald)';
+      pathIndicator.style.boxShadow = 'var(--emerald-glow)';
       
-      if (Date.now() - lastSpeechTime > 8000) {
-        dispatchAcousticCue('The path remains completely clear. Proceed straight forward safely.');
-      }
-    } else if (leftLoom) {
-      pathText.textContent = 'LEFT CHANNEL OCCUPIED — MAINTAIN ALIGNMENT TO RIGHT';
-      pathText.style.color = 'var(--amber)';
-      if (Date.now() - lastSpeechTime > 5000) {
-        dispatchAcousticCue('Object detected on your left. Maintain alignment slightly to the right.');
-      }
-    } else {
-      pathText.textContent = 'RIGHT CHANNEL OCCUPIED — MAINTAIN ALIGNMENT TO LEFT';
-      pathText.style.color = 'var(--amber)';
-      if (Date.now() - lastSpeechTime > 5000) {
-        dispatchAcousticCue('Object detected on your right. Maintain alignment slightly to the left.');
+      if (leftLoom && !rightLoom) {
+        pathText.textContent = 'CENTER PATH IS CLEAR. OBSTACLE LOOMING ON LEFT. VEER RIGHT.';
+        dispatchAcousticCue('Center clear. Hazard noted on left. Clear to steer right.');
+      } else if (rightLoom && !leftLoom) {
+        pathText.textContent = 'CENTER PATH IS CLEAR. OBSTACLE LOOMING ON RIGHT. VEER LEFT.';
+        dispatchAcousticCue('Center clear. Hazard noted on right. Clear to steer left.');
+      } else if (leftLoom && rightLoom) {
+        pathText.textContent = 'NARROW SEGMENT ENCOUNTERED. MAINTAIN RECTILINEAR CENTER TRAJECTORY.';
+        dispatchAcousticCue('Narrow gap ahead. Keep moving straight.');
+      } else {
+        pathText.textContent = 'ALL CHANNELS CLEAR. PROCEED FORWARD NOMINAL PACE.';
+        dispatchAcousticCue('All directions clear. Proceed straight.');
       }
     }
   }
 }
 
-function processFrameMetas() {
-  const currentInstant = performance.now();
-  fpsBuffer.push(1000 / (currentInstant - lastFrameTime));
-  lastFrameTime = currentInstant;
-  if (fpsBuffer.length > 20) fpsBuffer.shift();
-  valFps.textContent = (fpsBuffer.reduce((a,b)=>a+b,0) / fpsBuffer.length).toFixed(1);
-}
-
-async function executionPipelineLoop() {
+// ── Computational Engine Frame Loop ──────────────────
+async function processExecutionWire() {
   if (!detectionRunning) return;
-  processFrameMetas();
+
   frameIdx++;
   valFrames.textContent = frameIdx;
-  if (video.readyState >= 2) {
-    try { interpretSpatialArray(await model.detect(video)); } catch(err) {}
-  }
-  rafHandle = requestAnimationFrame(executionPipelineLoop);
-}
 
-// ── Application Mounting Stacks ──────────────────────
-async function initializeSystemMatrix() {
-  sysStatusVal.innerHTML = `<div class="status-dot"></div><span>SYNC BUFFERS</span>`;
+  const now = performance.now();
+  const fps = 1000 / (now - lastFrameTime);
+  lastFrameTime = now;
+  fpsBuffer.push(fps);
+  if (fpsBuffer.length > 20) fpsBuffer.shift();
+  const avgFps = fpsBuffer.reduce((a, b) => a + b, 0) / fpsBuffer.length;
+  valFps.textContent = avgFps.toFixed(1);
+
+  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    writeConsoleLog(`Telemetry bounds calibrated: [${canvas.width}x${canvas.height}] px`, '', 0, false, true);
+  }
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
   try {
-    writeConsoleLog('Opening active hardware optical lens arrays...', '', 0, false, true);
+    const rawPredictions = await model.detect(video);
+    drawVectorMatrix(rawPredictions, canvas.width, canvas.height);
+    interpretSpatialArray(rawPredictions);
+  } catch (err) {
+    console.error("Frame evaluation failure", err);
+  }
+
+  rafHandle = requestAnimationFrame(processExecutionWire);
+}
+
+// ── Orchestrated Bootstrap Operations ─────────────────
+async function bootstrapSystemSuite() {
+  writeConsoleLog('Spinning up localized sandboxed neural architecture instances...', '', 0, false, true);
+  try {
     await activateVideoArray();
-    canvas.width  = video.videoWidth  || 640;
-    canvas.height = video.videoHeight || 480;
-    writeConsoleLog('Camera linked. Compiling COCO-SSD dictionary layers...', '', 0, false, true);
-
-    model = await cocoSsd.load({ base: 'mobilenet_v2' });
-    writeConsoleLog('Computational vision model initialized. Pipelines armed.', '', 0, false, true);
-
-    loader.style.opacity = '0'; loader.style.transition = 'opacity 0.3s ease';
-    setTimeout(() => loader.style.display = 'none', 300);
+    writeConsoleLog('Camera environmental array initialized successfully.', '', 0, false, true);
     
-    sysDot.classList.add('active');
-    document.querySelector('#sys-status-indicator span').textContent = 'SYSTEM ACTIVE';
+    model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
+    writeConsoleLog('COCO-SSD Lite system model downloaded into local thread runtime.', '', 0, false, true);
+    
+    loader.style.opacity = '0';
+    loader.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => loader.style.display = 'none', 300);
 
+    sysDot.className = 'status-dot active';
+    sysStatusVal.querySelector('span').textContent = 'CORE ONLINE';
+    
     detectionRunning = true;
-    executionPipelineLoop();
-  } catch(error) {
-    loader.innerHTML = `<div style="color:var(--crimson); font-size:0.85rem; font-weight:700; text-align:center; padding:20px;">
-      CRITICAL HARDWARE INITIALIZATION EXCEPTION<br><small style="color:var(--text-secondary); font-family:var(--font-mono); font-size:0.68rem; display:block; margin-top:8px;">${error.message}</small></div>`;
+    rafHandle = requestAnimationFrame(processExecutionWire);
+  } catch (err) {
+    writeConsoleLog(`FATAL STACK EXCEPTION: ${err.message}`, '', 0, false, true);
+    document.querySelector('#system-loader p').textContent = 'BOOT INTERRUPTED — VERIFY CAMERA ACCESS';
+    document.querySelector('.spinner').style.borderColor = 'var(--crimson)';
   }
 }
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    detectionRunning = false;
-    if (rafHandle) cancelAnimationFrame(rafHandle);
-    speechSynthesis.cancel();
-  } else if (model) {
-    detectionRunning = true;
-    executionPipelineLoop();
-  }
-});
-
-window.addEventListener('load', initializeSystemMatrix);
+bootstrapSystemSuite();
 </script>
 </body>
 </html>
