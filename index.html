@@ -1,398 +1,423 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JuneVerse // SonicLedger Fixed Audio</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>SonicLedger — A gentle guide for blind walkers</title>
+<meta name="description" content="AI-powered walking companion that sees the world and whispers the safe way forward." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: oklch(0.16 0.03 270);
+    --bg-2: oklch(0.12 0.03 270);
+    --fg: oklch(0.97 0.01 90);
+    --muted: oklch(0.75 0.02 270);
+    --card: oklch(0.21 0.035 268 / 0.7);
+    --border: oklch(0.3 0.03 268);
+    --primary: oklch(0.82 0.16 75);
+    --primary-fg: oklch(0.18 0.03 270);
+    --primary-glow: oklch(0.9 0.14 85);
+    --accent: oklch(0.78 0.13 200);
+    --destructive: oklch(0.68 0.24 27);
+    --radius: 1rem;
+  }
+  *{box-sizing:border-box;border-color:var(--border)}
+  html,body{margin:0;min-height:100vh;color:var(--fg);font-family:Inter,system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, color-mix(in oklab, var(--primary) 22%, transparent), transparent 60%),
+      radial-gradient(900px 500px at 95% 10%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg-2));
+  }
+  .display{font-family:Fraunces,Georgia,serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 24px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:999px;background:var(--primary);color:var(--primary-fg);
+    display:grid;place-items:center;box-shadow:0 0 30px -5px var(--primary)}
+  h1{margin:0;font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.01em}
+  .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .status{font-size:12px;color:var(--muted);border:1px solid var(--border);
+    background:color-mix(in oklab, var(--card) 60%, transparent);
+    backdrop-filter:blur(8px);border-radius:999px;padding:6px 12px}
 
-    <style>
-        :root {
-            --bg-dark: #0d0f12;
-            --bg-panel: #14181f;
-            --accent-green: #10b981;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --border-color: #242b35;
-        }
+  .grid{display:grid;gap:28px;grid-template-columns:1.15fr 1fr}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            padding: 2rem;
-            min-height: 100vh;
-        }
+  .card{background:var(--card);border:1px solid var(--border);border-radius:22px;
+    backdrop-filter:blur(14px);padding:20px;box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
 
-        header {
-            margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+  .stage{position:relative;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:#000}
+  video{width:100%;height:100%;object-fit:cover;opacity:.4;transition:opacity .6s}
+  video.live{opacity:1}
+  .scan{position:absolute;inset:16px;border:1px solid color-mix(in oklab, var(--primary) 30%, transparent);border-radius:12px;pointer-events:none;display:none}
+  .pulse{position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;
+    background:var(--primary);transform:translate(-50%,-50%);display:none;
+    animation:pulse 1.8s cubic-bezier(.66,0,0,1) infinite}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 color-mix(in oklab, var(--primary) 55%, transparent)}
+    70%{box-shadow:0 0 0 22px color-mix(in oklab, var(--primary) 0%, transparent)}
+    100%{box-shadow:0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent)}
+  }
+  .live .scan,.live .pulse{display:block}
+  .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6),transparent 50%);pointer-events:none;display:none}
+  .live .veil{display:block}
+  .caption{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;gap:10px;align-items:flex-end;pointer-events:none}
+  .bubble{max-width:80%;background:color-mix(in oklab, var(--bg) 65%, transparent);
+    backdrop-filter:blur(8px);border-radius:12px;padding:8px 12px;font-size:14px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);margin-right:8px;vertical-align:middle;animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:.3}}
+  .rec{background:color-mix(in oklab, var(--primary) 90%, transparent);color:var(--primary-fg);
+    border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.12em;padding:4px 10px;text-transform:uppercase}
+  .placeholder{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted)}
+  .placeholder .cam{width:64px;height:64px;border-radius:999px;border:1px solid var(--border);background:color-mix(in oklab, var(--card) 80%, transparent);display:grid;place-items:center;margin:0 auto 12px}
+  .live + .placeholder, .stage.live .placeholder{display:none}
 
-        header h1 { font-size: 1.8rem; letter-spacing: -0.05em; }
-        header h1 span { color: var(--accent-green); }
-        .tagline { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--text-muted); }
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px}
+  button{font:inherit;border:0;cursor:pointer;border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;
+    display:inline-flex;align-items:center;gap:8px;transition:filter .15s, background .15s}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .btn-primary{background:var(--primary);color:var(--primary-fg);box-shadow:0 10px 30px -10px var(--primary)}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.1)}
+  .btn-ghost{background:color-mix(in oklab, var(--card) 80%, transparent);color:var(--fg);border:1px solid var(--border)}
+  .btn-ghost:hover:not(:disabled){background:color-mix(in oklab, var(--card) 100%, transparent)}
+  .btn-danger{background:var(--destructive);color:#fff}
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+  .pace{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--muted)}
+  .pace b{color:var(--fg);font-weight:600}
+  input[type=range]{accent-color:var(--primary);width:120px}
 
-        @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } }
+  .err{margin-top:14px;border:1px solid color-mix(in oklab, var(--destructive) 40%, transparent);
+    background:color-mix(in oklab, var(--destructive) 12%, transparent);color:#fff;
+    padding:10px 14px;border-radius:12px;font-size:14px}
 
-        .panel {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-        }
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--primary);margin-bottom:8px}
+  h2{font-family:Fraunces,serif;font-size:30px;line-height:1.15;margin:0}
+  h2 em{color:var(--primary-glow);font-style:italic}
+  .lede{color:var(--muted);font-size:14px;margin-top:10px}
+  ul.feat{list-style:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:12px;font-size:14px}
+  .feat li{display:flex;gap:12px}
+  .check{width:20px;height:20px;border-radius:999px;background:color-mix(in oklab, var(--primary) 22%, transparent);color:var(--primary);display:grid;place-items:center;flex-shrink:0;margin-top:2px}
+  .feat .t{font-weight:600}
+  .feat .b{color:var(--muted)}
 
-        .panel-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+  .log h3{margin:0;font-size:14px;font-weight:600}
+  .log-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .log-head span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  ol.log{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+  ol.log li{background:color-mix(in oklab, var(--bg) 50%, transparent);border-radius:12px;padding:8px 12px;font-size:14px;display:flex;gap:12px;align-items:flex-start}
+  ol.log .d{width:8px;height:8px;border-radius:50%;background:color-mix(in oklab, var(--primary) 80%, transparent);margin-top:6px;flex-shrink:0}
+  ol.log time{font-size:10px;color:var(--muted);flex-shrink:0}
 
-        .viewfinder-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 4/3;
-            background-color: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:24px}
 
-        video { width: 100%; height: 100%; object-fit: cover; }
-
-        .lane-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; pointer-events: none;
-            z-index: 10;
-        }
-
-        .lane {
-            flex: 1;
-            border-left: 1px dashed rgba(255, 255, 255, 0.1);
-            border-right: 1px dashed rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
-
-        .lane::after {
-            content: attr(data-label);
-            position: absolute; bottom: 10px; left: 50%;
-            transform: translateX(-50%);
-            font-family: 'Space Mono', monospace; font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.3); text-transform: uppercase;
-        }
-
-        .lane.active-block {
-            background-color: rgba(239, 68, 68, 0.25);
-            border: 2px solid #ef4444;
-        }
-
-        .web3-metric-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            font-family: 'Space Mono', monospace;
-        }
-
-        .metric-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; }
-        .metric-value { color: var(--accent-green); word-break: break-all; }
-
-        .terminal-box {
-            background-color: #080a0d;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'Space Mono', monospace; font-size: 0.85rem;
-            height: 250px; overflow-y: auto;
-            color: #34d399; flex-grow: 1;
-        }
-
-        .terminal-line { margin-bottom: 0.4rem; }
-        .terminal-timestamp { color: var(--text-muted); margin-right: 0.5rem; }
-
-        .btn {
-            background-color: var(--accent-green);
-            color: #000; border: none; padding: 0.8rem 1.5rem;
-            font-family: 'Space Grotesk', sans-serif; font-weight: 600;
-            border-radius: 6px; cursor: pointer;
-            transition: all 0.2s ease; width: 100%; margin-top: 1rem;
-        }
-
-        .btn:disabled { background-color: #1e2530; color: var(--text-muted); cursor: not-allowed; }
-    </style>
+  /* API key panel */
+  .keyrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .keyrow input{flex:1;min-width:220px;background:var(--bg);color:var(--fg);border:1px solid var(--border);
+    padding:10px 12px;border-radius:10px;font:inherit}
+  .keyrow a{color:var(--accent)}
+  .keyhint{color:var(--muted);font-size:12px;margin-top:8px}
+</style>
 </head>
 <body>
+<main class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 12h2M7 8v8M11 4v16M15 8v8M19 11v2"/>
+        </svg>
+      </div>
+      <div>
+        <h1>SonicLedger</h1>
+        <div class="sub">Eyes that whisper.</div>
+      </div>
+    </div>
+    <span class="status" id="status" aria-live="polite">Standby</span>
+  </header>
 
-    <header>
-        <div>
-            <h1>JuneVerse // <span>SonicLedger</span></h1>
-            <div class="tagline">RESEARCH • INNOVATE • TECHNOLOGY</div>
+  <section class="grid">
+    <div class="card">
+      <div id="stage" class="stage">
+        <video id="video" playsinline muted></video>
+        <div class="veil"></div>
+        <div class="scan"></div>
+        <div class="pulse" aria-hidden="true"></div>
+        <div class="caption">
+          <div class="bubble"><span class="dot"></span><span id="caption">Listening to the world…</span></div>
+          <span class="rec">REC</span>
         </div>
-        <div class="tagline">AUDIO-FIXED WALKING ASSIST</div>
-    </header>
-
-    <main class="dashboard-grid">
-        <div class="panel">
-            <div class="panel-title">
-                LIVE PERCEPTION ENVIRONMENT
-                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• ENGINE ASLEEP</span>
+        <div class="placeholder" id="placeholder">
+          <div>
+            <div class="cam">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/>
+              </svg>
             </div>
-            
-            <div class="viewfinder-container">
-                <video id="webcam" autoplay playsinline muted></video>
-                <div class="lane-overlay">
-                    <div class="lane" id="lane-left" data-label="Left Lane"></div>
-                    <div class="lane" id="lane-center" data-label="Center Path"></div>
-                    <div class="lane" id="lane-right" data-label="Right Lane"></div>
-                </div>
-            </div>
-
-            <button class="btn" id="btn-start">ACTIVATE SYSTEM PERCEPTION</button>
+            <div>Tap below to wake the camera</div>
+          </div>
         </div>
+      </div>
+      <canvas id="canvas" style="display:none"></canvas>
 
-        <div class="panel">
-            <div class="panel-title">DECENTRALIZED SPACE ACCOUNTABILITY MATRIX</div>
-            
-            <div class="web3-metric-card">
-                <div class="metric-row">
-                    <span>Wallet Identity Node:</span>
-                    <span class="metric-value" id="wallet-addr">Uninitialized</span>
-                </div>
-                <div class="metric-row">
-                    <span>Validation Reward Balance:</span>
-                    <span class="metric-value" id="wallet-bal">0.00 JNV</span>
-                </div>
-                <div class="metric-row">
-                    <span>Active Decentralized Block:</span>
-                    <span class="metric-value" id="ledger-block">#749,210</span>
-                </div>
-            </div>
+      <div class="controls">
+        <button id="startBtn" class="btn-primary">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>
+          Begin guidance
+        </button>
+        <button id="stopBtn" class="btn-danger" style="display:none">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          End session
+        </button>
+        <button id="scanBtn" class="btn-ghost" disabled>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
+          Scan now
+        </button>
+        <label class="pace">
+          <b>Pace</b>
+          <input id="pace" type="range" min="2000" max="7000" step="500" value="3500" aria-label="Time between scans"/>
+          <span id="paceVal">3.5s</span>
+        </label>
+      </div>
 
-            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ASSIST EVENT MONITOR LOG</div>
-            <div class="terminal-box" id="terminal">
-                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Ready to mount software arrays...</div>
-            </div>
+      <div id="err" class="err" style="display:none"></div>
+
+      <details style="margin-top:18px">
+        <summary style="cursor:pointer;color:var(--muted);font-size:13px">⚙ AI key (Google Gemini)</summary>
+        <div style="margin-top:10px">
+          <div class="keyrow">
+            <input id="apiKey" type="password" placeholder="Paste your Google AI Studio API key" autocomplete="off"/>
+            <button class="btn-ghost" id="saveKey">Save</button>
+          </div>
+          <div class="keyhint">
+            Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a>.
+            Stored only in your browser (localStorage). Never sent anywhere except Google.
+          </div>
         </div>
-    </main>
+      </details>
+    </div>
 
-    <script>
-        let web3;
-        let model;
-        let tokenBalance = 0.00;
-        let currentBlock = 749210;
-        
-        // Audio Synthesis Controller Reference Mapping
-        const synth = window.speechSynthesis;
-        let selectedVoice = null;
-        let lastSpokenTime = 0;
-        
-        const video = document.getElementById('webcam');
-        const terminal = document.getElementById('terminal');
-        const btnStart = document.getElementById('btn-start');
-        const statusBadge = document.getElementById('status-badge');
+    <aside style="display:flex;flex-direction:column;gap:20px">
+      <div class="card">
+        <div class="eyebrow">A gentle guide</div>
+        <h2>We narrate the world,<br/><em>step by step.</em></h2>
+        <p class="lede">Point the camera forward. SonicLedger scans the path, names every obstacle —
+          a person, a curb, a passing car — and whispers the safest direction into your earbuds.</p>
+        <ul class="feat">
+          <li><span class="check">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span><div><div class="t">Hazard alerts</div><div class="b">Stops you before stairs, walls, traffic, or strangers in your path.</div></div></li>
+          <li><span class="check">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span><div><div class="t">Path forking</div><div class="b">When the way splits, you hear both options and the recommended one.</div></div></li>
+          <li><span class="check">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span><div><div class="t">Soft female voice</div><div class="b">Calm tone, tuned for earbuds. Urgent warnings interrupt politely.</div></div></li>
+        </ul>
+      </div>
 
-        // Pre-load browser voices asynchronously to protect system thread timing
-        function loadSystemVoices() {
-            let voices = synth.getVoices();
-            // Fallback selection to an English default module profile
-            selectedVoice = voices.find(v => v.lang.includes('en')) || voices[0];
-        }
-        loadSystemVoices();
-        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = loadSystemVoices;
-        }
+      <div class="card log">
+        <div class="log-head"><h3>Recent whispers</h3><span>live log</span></div>
+        <ol id="log" class="log"></ol>
+        <div id="logEmpty" style="color:var(--muted);font-size:14px">Nothing yet — your last few cues will appear here.</div>
+      </div>
+    </aside>
+  </section>
 
-        function printLog(channel, msg) {
-            const time = new Date().toLocaleTimeString();
-            const element = document.createElement('div');
-            element.className = 'terminal-line';
-            element.innerHTML = `<span class="terminal-timestamp">[${time}] (${channel})</span> ${msg}`;
-            terminal.appendChild(element);
-            terminal.scrollTop = terminal.scrollHeight;
-        }
+  <footer>Walk gently. SonicLedger assists, but always trust your cane and instincts.</footer>
+</main>
 
-        function setupWeb3Node() {
-            web3 = new Web3();
-            const account = web3.eth.accounts.create();
-            document.getElementById('wallet-addr').innerText = account.address.substring(0,6) + "..." + account.address.substring(36);
-            printLog("WEB3", `Consensus node wallet created.`);
-        }
+<script>
+(() => {
+  const SYSTEM_PROMPT = `You are SonicLedger, an AI navigation assistant for blind users walking outdoors or indoors. You will receive a single frame from a chest/forehead-mounted camera.
 
-        // Complete, Bulletproof Vocalization Framework Routine
-        function voiceGuide(objectLabel, safeAction) {
-            const now = Date.now();
-            
-            // Limit audio warning triggers to a maximum density profile of once every 4.5 seconds to avoid breaking audio loops
-            if (now - lastSpokenTime < 4500) return; 
+Analyze the scene for navigation hazards and path guidance. Respond with ONLY a short spoken instruction (max 18 words) that will be read aloud through earbuds.
 
-            // Hard reset speech buffer stack lines to wipe away lag jams
-            synth.cancel();
+Rules:
+- If there is an immediate obstacle (within ~2 meters: person, car, chair, wall, pole, stairs, curb, door), START with "Stop." then name the obstacle and direction (left/center/right), then suggest the safest move ("step right", "wait", "turn around").
+- If there is a fork or two possible paths, briefly describe both ("Path forks: clear sidewalk left, stairs right. Take left.").
+- If the path is clear, say something brief and calm like "Path clear ahead." If truly nothing changed and clear, just say "Clear.".
+- For traffic: warn about moving vehicles, crossing signals, curbs.
+- Never use visual-only words like "see", "look", "watch". Use "ahead", "to your left", "two steps in front".
+- No greetings, no filler, no markdown. One sentence. Calm, confident tone.`;
 
-            let textInstruction = `Notice. There is a ${objectLabel} blocking your center path. `;
-            if (safeAction === 'right') {
-                textInstruction += "Please turn right to bypass it.";
-            } else if (safeAction === 'left') {
-                textInstruction += "Please turn left to bypass it.";
-            } else {
-                textInstruction += "Path completely obstructed. Please stop.";
-            }
+  const $ = (id) => document.getElementById(id);
+  const video = $('video'), canvas = $('canvas'), stage = $('stage');
+  const startBtn = $('startBtn'), stopBtn = $('stopBtn'), scanBtn = $('scanBtn');
+  const statusEl = $('status'), captionEl = $('caption'), errEl = $('err');
+  const pace = $('pace'), paceVal = $('paceVal');
+  const logEl = $('log'), logEmpty = $('logEmpty');
+  const apiKeyInput = $('apiKey'), saveKey = $('saveKey');
 
-            const utterance = new SpeechSynthesisUtterance(textInstruction);
-            if (selectedVoice) utterance.voice = selectedVoice;
-            utterance.rate = 0.95; // Human-friendly pace
-            utterance.volume = 1.0; // Enforce maximum volume configuration metrics
+  let stream = null, loop = null, intervalMs = 3500;
+  let lastSpoken = '', lastSpokenAt = 0;
+  let voice = null;
 
-            // Handshake execution out loud
-            synth.speak(utterance);
-            lastSpokenTime = now;
-            printLog("VOCAL ENGINE", `Spoken out loud: "${textInstruction}"`);
-        }
+  // ---- API key
+  const savedKey = localStorage.getItem('sonicledger.geminiKey') || '';
+  if (savedKey) apiKeyInput.value = savedKey;
+  saveKey.addEventListener('click', () => {
+    localStorage.setItem('sonicledger.geminiKey', apiKeyInput.value.trim());
+    showError('API key saved.', false);
+  });
 
-        btnStart.addEventListener('click', async () => {
-            btnStart.disabled = true;
-            btnStart.innerText = "LOADING CORE SYSTEMS...";
-            statusBadge.innerText = "• COMPILING TENSORFLOW...";
-            statusBadge.style.color = "#3b82f6";
-            
-            // CRITICAL STEP: Explicit initial spoken trigger to unlock native sound engine privileges 
-            synth.cancel();
-            const handshakeUtterance = new SpeechSynthesisUtterance("JuneVerse system online. Scanning pathways.");
-            if (selectedVoice) handshakeUtterance.voice = selectedVoice;
-            synth.speak(handshakeUtterance);
-            printLog("VOCAL ENGINE", "Audio buffer handshake channel opened successfully.");
+  // ---- Voice selection (soft female)
+  function pickVoice(voices) {
+    if (!voices.length) return null;
+    const preferred = [
+      "Google UK English Female",
+      "Microsoft Aria Online (Natural) - English (United States)",
+      "Microsoft Jenny Online (Natural) - English (United States)",
+      "Samantha","Karen","Serena","Victoria","Google US English"
+    ];
+    for (const n of preferred) { const v = voices.find(x => x.name === n); if (v) return v; }
+    const hints = ["female","samantha","victoria","karen","serena","aria","jenny","zira","joanna","amy","emma","lily"];
+    return voices.find(v => hints.some(h => v.name.toLowerCase().includes(h)) && v.lang.startsWith('en'))
+        || voices.find(v => v.lang.startsWith('en')) || voices[0];
+  }
+  function loadVoices(){ voice = pickVoice(speechSynthesis.getVoices()); }
+  if ('speechSynthesis' in window) {
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
 
-            setupWeb3Node();
+  function speak(text, urgent=false) {
+    if (!('speechSynthesis' in window)) return;
+    const clean = (text||'').trim(); if (!clean) return;
+    const now = Date.now();
+    if (!urgent && clean === lastSpoken && now - lastSpokenAt < 6000) return;
+    if (urgent) speechSynthesis.cancel();
+    else if (speechSynthesis.speaking) return;
+    const u = new SpeechSynthesisUtterance(clean);
+    if (voice) u.voice = voice;
+    u.rate = 1.02; u.pitch = 1.08; u.volume = 1;
+    lastSpoken = clean; lastSpokenAt = now;
+    speechSynthesis.speak(u);
+  }
 
-            // Fire Camera Stream Access Pipelines
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: 640, height: 480 }, 
-                    audio: false 
-                });
-                video.srcObject = stream;
-                printLog("HARDWARE", "Camera active channel locked.");
-            } catch (err) {
-                printLog("ERROR", "Sensor array access blocked.");
-                alert("Webcam device permissions are mandatory for runtime processing execution.");
-                btnStart.disabled = false;
-                btnStart.innerText = "ACTIVATE SYSTEM";
-                return;
-            }
+  function showError(msg, isError=true) {
+    if (!msg) { errEl.style.display='none'; errEl.textContent=''; return; }
+    errEl.style.display='block';
+    errEl.style.color = isError ? '#fff' : 'var(--fg)';
+    errEl.textContent = msg;
+  }
 
-            // Load COCO-SSD Vision model weights
-            try {
-                printLog("AI PIPELINE", "Downloading object tracking layers into page cache sandbox...");
-                model = await cocoSsd.load();
-                
-                printLog("AI PIPELINE", "Detection engine fully configured.");
-                statusBadge.innerText = "• ASSIST PIPELINE ACTIVE";
-                statusBadge.style.color = "var(--accent-green)";
-                btnStart.innerText = "SYSTEM ACTIVE";
-                
-                video.onloadeddata = () => {
-                    startPerceptionLoop();
-                };
-            } catch (err) {
-                printLog("ERROR", `AI pipeline boot fault: ${err.message}`);
-            }
-        });
+  function captureFrame() {
+    if (!video.videoWidth || video.readyState < 2) return null;
+    const w = 640;
+    const h = Math.round(w * (video.videoHeight / video.videoWidth));
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+    // Gemini wants raw base64 (no data: prefix)
+    return canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+  }
 
-        function startPerceptionLoop() {
-            const laneLeft = document.getElementById('lane-left');
-            const laneCenter = document.getElementById('lane-center');
-            const laneRight = document.getElementById('lane-right');
+  async function callGemini(imageB64) {
+    const key = (apiKeyInput.value || localStorage.getItem('sonicledger.geminiKey') || '').trim();
+    if (!key) throw new Error('Add a Google Gemini API key in the settings panel below.');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+    const body = {
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: 'Analyze this frame and give one short spoken navigation instruction.' },
+          { inline_data: { mime_type: 'image/jpeg', data: imageB64 } }
+        ]
+      }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 80 }
+    };
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      const t = await resp.text();
+      throw new Error(`AI error ${resp.status}: ${t.slice(0,160)}`);
+    }
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join(' ').trim();
+    return text || 'Clear.';
+  }
 
-            async function predictFrame() {
-                if (!model || video.paused || video.ended) {
-                    requestAnimationFrame(predictFrame);
-                    return;
-                }
+  function pushLog(text) {
+    logEmpty.style.display = 'none';
+    const li = document.createElement('li');
+    const d = document.createElement('span'); d.className = 'd';
+    const span = document.createElement('span'); span.style.flex='1'; span.textContent = text;
+    const t = document.createElement('time');
+    t.textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    li.append(d, span, t);
+    logEl.prepend(li);
+    while (logEl.children.length > 12) logEl.removeChild(logEl.lastChild);
+  }
 
-                const predictions = await model.detect(video);
-                
-                let centerBlocked = false;
-                let leftBlocked = false;
-                let rightBlocked = false;
-                let activeObstacleItem = "";
+  async function analyzeOnce() {
+    const img = captureFrame();
+    if (!img) return;
+    try {
+      const text = await callGemini(img);
+      const urgent = /^stop[.!,\s]/i.test(text) || /warning|caution|danger/i.test(text);
+      captionEl.textContent = text;
+      pushLog(text);
+      speak(text, urgent);
+      showError('');
+    } catch (e) {
+      showError(e.message || 'Network error.');
+    }
+  }
 
-                laneLeft.className = "lane";
-                laneCenter.className = "lane";
-                laneRight.className = "lane";
+  async function start() {
+    showError('');
+    statusEl.textContent = 'Waking the lens…';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: {ideal:1280}, height: {ideal:720} },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      video.classList.add('live'); stage.classList.add('live');
+      $('placeholder').style.display = 'none';
+      startBtn.style.display = 'none'; stopBtn.style.display = 'inline-flex';
+      scanBtn.disabled = false;
+      statusEl.textContent = 'Guiding · live';
+      speak('SonicLedger is now guiding you. Walk gently.', true);
+      setTimeout(analyzeOnce, 1500);
+      loop = setInterval(analyzeOnce, intervalMs);
+    } catch (e) {
+      statusEl.textContent = 'Standby';
+      showError('Camera access failed: ' + (e.message || e));
+      speak('Camera access was denied. Please allow camera and try again.', true);
+    }
+  }
 
-                predictions.forEach(prediction => {
-                    // Filter targets with validation confidence boundaries > 50%
-                    if (prediction.score > 0.50) {
-                        const [x, y, width, height] = prediction.bbox;
-                        const videoWidth = video.videoWidth || 640;
-                        const objectMidX = (x + (width / 2)) / videoWidth;
+  function stop() {
+    if (loop) { clearInterval(loop); loop = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    video.classList.remove('live'); stage.classList.remove('live');
+    $('placeholder').style.display = 'grid';
+    startBtn.style.display = 'inline-flex'; stopBtn.style.display = 'none';
+    scanBtn.disabled = true;
+    statusEl.textContent = 'Standby';
+  }
 
-                        // Lane partition logic boundaries mapping layout
-                        if (objectMidX > 0.33 && objectMidX < 0.66) {
-                            centerBlocked = true;
-                            activeObstacleItem = prediction.class;
-                            laneCenter.className = "lane active-block";
-                        } else if (objectMidX <= 0.33) {
-                            leftBlocked = true;
-                            laneLeft.className = "lane active-block";
-                        } else if (objectMidX >= 0.66) {
-                            rightBlocked = true;
-                            laneRight.className = "lane active-block";
-                        }
-                    }
-                });
+  pace.addEventListener('input', () => {
+    intervalMs = Number(pace.value);
+    paceVal.textContent = (intervalMs/1000).toFixed(1) + 's';
+    if (loop) { clearInterval(loop); loop = setInterval(analyzeOnce, intervalMs); }
+  });
 
-                // Decision evaluation execution
-                if (centerBlocked) {
-                    let bypassRoute = 'none';
-                    if (!rightBlocked) {
-                        bypassRoute = 'right';
-                    } else if (!leftBlocked) {
-                        bypassRoute = 'left';
-                    }
-
-                    // Direct invocation call to our updated vocal routine system
-                    voiceGuide(activeObstacleItem, bypassRoute);
-
-                    // Web3 Ledger metric increment steps updates
-                    currentBlock += 1;
-                    tokenBalance += 0.75;
-                    document.getElementById('ledger-block').innerText = `#${currentBlock}`;
-                    document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
-                    printLog("LEDGER", `Verified transaction logged onto Block #${currentBlock}. Allocation +0.75 JNV payout.`);
-                }
-
-                setTimeout(() => {
-                    requestAnimationFrame(predictFrame);
-                }, 150); // Frame evaluations execution ticks every 150ms for performance safety profiles
-            }
-
-            predictFrame();
-        }
-    </script>
+  startBtn.addEventListener('click', start);
+  stopBtn.addEventListener('click', stop);
+  scanBtn.addEventListener('click', analyzeOnce);
+  window.addEventListener('beforeunload', stop);
+})();
+</script>
 </body>
 </html>
+
           
