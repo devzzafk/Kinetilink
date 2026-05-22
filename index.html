@@ -1,397 +1,696 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JuneVerse // SonicLedger Fixed Audio</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/web3@4.1.1/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VisionPath — JuneVerse AI Navigation</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-deep:   #0b0f19;
+    --bg-panel:  #0e1420;
+    --bg-glass:  rgba(19,26,38,0.85);
+    --neon:      #00ffcc;
+    --neon-dim:  rgba(0,255,204,0.15);
+    --neon-glow: 0 0 8px #00ffcc, 0 0 24px rgba(0,255,204,0.4);
+    --red:       #ff3366;
+    --red-glow:  0 0 8px #ff3366, 0 0 24px rgba(255,51,102,0.4);
+    --amber:     #ffaa00;
+    --text-main: #c8d8e8;
+    --text-dim:  #4a6070;
+    --border:    rgba(0,255,204,0.18);
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-hud:  'Orbitron', sans-serif;
+    --font-body: 'Rajdhani', sans-serif;
+  }
+  html, body { width:100%; height:100%; background:var(--bg-deep); color:var(--text-main); font-family:var(--font-body); overflow:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image: linear-gradient(rgba(0,255,204,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(0,255,204,0.03) 1px,transparent 1px);
+    background-size:40px 40px; pointer-events:none; z-index:0;
+    animation:gridPulse 8s ease-in-out infinite;
+  }
+  @keyframes gridPulse { 0%,100%{opacity:.6} 50%{opacity:1} }
 
-    <style>
-        :root {
-            --bg-dark: #0d0f12;
-            --bg-panel: #14181f;
-            --accent-green: #10b981;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --border-color: #242b35;
-        }
+  /* HEADER */
+  #header { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:10px 24px; border-bottom:1px solid var(--border); background:var(--bg-glass); backdrop-filter:blur(12px); }
+  #header .logo { display:flex; align-items:center; gap:12px; }
+  #header .logo-icon { width:36px; height:36px; border:2px solid var(--neon); border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:var(--neon-glow); animation:iconPulse 2s ease-in-out infinite; }
+  @keyframes iconPulse { 0%,100%{box-shadow:var(--neon-glow)} 50%{box-shadow:0 0 20px #00ffcc,0 0 50px rgba(0,255,204,0.5)} }
+  #header .logo-icon svg { width:20px; height:20px; }
+  #header h1 { font-family:var(--font-hud); font-size:1.25rem; font-weight:900; color:var(--neon); text-shadow:var(--neon-glow); letter-spacing:3px; }
+  #header .ecosystem { font-family:var(--font-hud); font-size:.55rem; letter-spacing:4px; color:var(--text-dim); margin-top:2px; }
+  #header .status-row { display:flex; align-items:center; gap:20px; }
+  .status-chip { font-family:var(--font-mono); font-size:.65rem; letter-spacing:1px; padding:4px 10px; border:1px solid var(--border); border-radius:3px; background:var(--neon-dim); color:var(--neon); }
+  #sys-status { font-family:var(--font-mono); font-size:.7rem; color:var(--text-dim); }
+  #sys-status span { color:var(--amber); }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            padding: 2rem;
-            min-height: 100vh;
-        }
+  /* LAYOUT */
+  #main { position:relative; z-index:5; display:grid; grid-template-columns:640px 1fr; height:calc(100vh - 57px); }
 
-        header {
-            margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+  /* VIDEO PANE */
+  #video-pane { position:relative; background:#000; overflow:hidden; border-right:1px solid var(--border); }
+  #cam-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+  #cam-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .lane-div { height:100%; width:1px; background:linear-gradient(to bottom,transparent 0%,rgba(0,255,204,.3) 30%,rgba(0,255,204,.3) 70%,transparent 100%); position:absolute; }
+  #ld1 { left:33.3%; } #ld2 { left:66.6%; }
+  .lane-label { position:absolute; top:12px; font-family:var(--font-hud); font-size:.55rem; letter-spacing:3px; color:rgba(0,255,204,.5); width:33.3%; text-align:center; }
+  #ll-left { left:0% } #ll-center { left:33.3% } #ll-right { left:66.6% }
+  #path-banner { position:absolute; bottom:0; left:0; right:0; padding:10px 16px; background:rgba(11,15,25,.88); border-top:1px solid var(--border); display:flex; align-items:center; gap:12px; backdrop-filter:blur(8px); }
+  #path-indicator { width:10px; height:10px; border-radius:50%; background:var(--neon); box-shadow:var(--neon-glow); flex-shrink:0; animation:blinkDot 1s ease-in-out infinite; }
+  @keyframes blinkDot { 0%,100%{opacity:1} 50%{opacity:.3} }
+  #path-text { font-family:var(--font-mono); font-size:.78rem; letter-spacing:1px; color:var(--neon); }
+  #loader { position:absolute; inset:0; background:rgba(11,15,25,.96); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:100; }
+  .loader-ring { width:60px; height:60px; border:2px solid var(--neon-dim); border-top-color:var(--neon); border-radius:50%; animation:spin .9s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  #loader p { font-family:var(--font-hud); font-size:.7rem; letter-spacing:3px; color:var(--neon); }
+  #loader small { font-family:var(--font-mono); font-size:.6rem; color:var(--text-dim); }
+  #danger-flash { position:absolute; inset:0; pointer-events:none; border:3px solid transparent; transition:border-color .15s; z-index:50; }
+  #danger-flash.active { border-color:var(--red); box-shadow:inset 0 0 40px rgba(255,51,102,.2); }
+  #prox-bar { position:absolute; top:36px; right:8px; width:6px; height:calc(100% - 80px); background:rgba(0,0,0,.5); border:1px solid var(--border); border-radius:3px; overflow:hidden; }
+  #prox-fill { position:absolute; bottom:0; width:100%; background:linear-gradient(to top,var(--red),var(--amber),var(--neon)); transition:height .3s ease; height:0%; }
+  #prox-label { position:absolute; top:36px; right:18px; font-family:var(--font-hud); font-size:.45rem; letter-spacing:2px; color:var(--text-dim); writing-mode:vertical-rl; transform:rotate(180deg); }
 
-        header h1 { font-size: 1.8rem; letter-spacing: -0.05em; }
-        header h1 span { color: var(--accent-green); }
-        .tagline { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--text-muted); }
+  /* TERMINAL PANEL */
+  #terminal-panel { display:flex; flex-direction:column; background:var(--bg-panel); overflow:hidden; }
+  .t-section { border-bottom:1px solid var(--border); padding:12px 16px; }
+  .t-section-title { font-family:var(--font-hud); font-size:.55rem; letter-spacing:4px; color:var(--text-dim); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .t-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+  #lane-status { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .lane-card { background:var(--bg-glass); border:1px solid var(--border); border-radius:4px; padding:8px; text-align:center; transition:all .3s ease; }
+  .lane-card .lc-name { font-family:var(--font-hud); font-size:.5rem; letter-spacing:2px; color:var(--text-dim); margin-bottom:4px; }
+  .lane-card .lc-status { font-family:var(--font-hud); font-size:.75rem; font-weight:700; letter-spacing:1px; color:var(--neon); }
+  .lane-card.blocked { border-color:rgba(255,51,102,.5); }
+  .lane-card.blocked .lc-status { color:var(--red); }
+  .lane-card.clear { border-color:rgba(0,255,204,.4); }
+  .lane-card.clear .lc-status { color:var(--neon); }
+  #detection-feed-wrap { flex:1; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+  #detection-feed { flex:1; overflow-y:auto; padding:8px 16px; font-family:var(--font-mono); font-size:.68rem; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+  #detection-feed::-webkit-scrollbar { width:4px; }
+  #detection-feed::-webkit-scrollbar-thumb { background:var(--border); }
+  .feed-entry { display:flex; gap:8px; align-items:baseline; padding:2px 0; animation:fadeIn .25s ease; border-bottom:1px solid rgba(0,255,204,.05); }
+  @keyframes fadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1} }
+  .feed-ts { color:var(--text-dim); flex-shrink:0; font-size:.6rem; }
+  .feed-obj { color:var(--neon); font-weight:bold; }
+  .feed-obj.danger { color:var(--red); }
+  .feed-lane { color:var(--amber); font-size:.62rem; }
+  .feed-conf { color:var(--text-dim); font-size:.6rem; margin-left:auto; }
+  .feed-token { color:#00ff88; font-size:.65rem; }
+  .feed-sys { color:var(--text-dim); font-style:italic; }
+  #speech-box { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); background:rgba(0,0,0,.3); }
+  #speech-icon { width:26px; height:26px; flex-shrink:0; border-radius:50%; border:1px solid var(--neon); display:flex; align-items:center; justify-content:center; transition:all .3s; }
+  #speech-icon.speaking { background:var(--neon-dim); box-shadow:var(--neon-glow); animation:speakPulse .6s ease-in-out infinite; }
+  @keyframes speakPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+  #speech-text { font-family:var(--font-mono); font-size:.68rem; color:var(--neon); letter-spacing:.5px; line-height:1.4; }
+  #speech-text.idle { color:var(--text-dim); }
+  #fps-bar { display:flex; align-items:center; gap:16px; padding:6px 16px; border-bottom:1px solid var(--border); background:rgba(0,0,0,.1); }
+  .fps-item { font-family:var(--font-mono); font-size:.6rem; color:var(--text-dim); }
+  .fps-item span { color:var(--neon); }
+  #wallet-panel { padding:10px 16px; background:rgba(0,0,0,.2); border-top:1px solid var(--border); flex-shrink:0; }
+  #wallet-addr { font-family:var(--font-mono); font-size:.6rem; color:var(--text-dim); word-break:break-all; margin-bottom:6px; }
+  #wallet-addr span { color:var(--neon); }
+  #wallet-balance { display:flex; align-items:center; justify-content:space-between; }
+  #wallet-balance .wb-label { font-family:var(--font-hud); font-size:.55rem; letter-spacing:2px; color:var(--text-dim); }
+  #wallet-balance .wb-value { font-family:var(--font-hud); font-size:1rem; font-weight:700; color:var(--neon); text-shadow:var(--neon-glow); transition:all .4s; }
+  #wallet-balance .wb-value.bump { transform:scale(1.15); text-shadow:0 0 20px #00ffcc,0 0 40px #00ffcc; }
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } }
-
-        .panel {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .viewfinder-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 4/3;
-            background-color: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
-
-        video { width: 100%; height: 100%; object-fit: cover; }
-
-        .lane-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; pointer-events: none;
-            z-index: 10;
-        }
-
-        .lane {
-            flex: 1;
-            border-left: 1px dashed rgba(255, 255, 255, 0.1);
-            border-right: 1px dashed rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
-
-        .lane::after {
-            content: attr(data-label);
-            position: absolute; bottom: 10px; left: 50%;
-            transform: translateX(-50%);
-            font-family: 'Space Mono', monospace; font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.3); text-transform: uppercase;
-        }
-
-        .lane.active-block {
-            background-color: rgba(239, 68, 68, 0.25);
-            border: 2px solid #ef4444;
-        }
-
-        .web3-metric-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            font-family: 'Space Mono', monospace;
-        }
-
-        .metric-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; }
-        .metric-value { color: var(--accent-green); word-break: break-all; }
-
-        .terminal-box {
-            background-color: #080a0d;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'Space Mono', monospace; font-size: 0.85rem;
-            height: 250px; overflow-y: auto;
-            color: #34d399; flex-grow: 1;
-        }
-
-        .terminal-line { margin-bottom: 0.4rem; }
-        .terminal-timestamp { color: var(--text-muted); margin-right: 0.5rem; }
-
-        .btn {
-            background-color: var(--accent-green);
-            color: #000; border: none; padding: 0.8rem 1.5rem;
-            font-family: 'Space Grotesk', sans-serif; font-weight: 600;
-            border-radius: 6px; cursor: pointer;
-            transition: all 0.2s ease; width: 100%; margin-top: 1rem;
-        }
-
-        .btn:disabled { background-color: #1e2530; color: var(--text-muted); cursor: not-allowed; }
-    </style>
+  /* AUDIO GATE */
+  #audio-gate {
+    position:fixed; inset:0; background:rgba(11,15,25,.97); z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+    backdrop-filter:blur(6px);
+  }
+  #audio-gate h2 { font-family:var(--font-hud); font-size:1rem; letter-spacing:5px; color:var(--neon); text-shadow:var(--neon-glow); }
+  #audio-gate p { font-family:var(--font-mono); font-size:.72rem; color:var(--text-dim); text-align:center; max-width:360px; line-height:1.8; }
+  #audio-gate-btn {
+    padding:16px 52px; background:transparent; border:2px solid var(--neon); border-radius:4px;
+    color:var(--neon); font-family:var(--font-hud); font-size:.9rem; letter-spacing:4px;
+    cursor:pointer; transition:all .2s; animation:gatePulse 1.5s ease-in-out infinite;
+  }
+  #audio-gate-btn:hover { background:var(--neon-dim); box-shadow:0 0 30px #00ffcc,0 0 60px rgba(0,255,204,.4); }
+  @keyframes gatePulse { 0%,100%{box-shadow:var(--neon-glow)} 50%{box-shadow:0 0 20px #00ffcc,0 0 50px rgba(0,255,204,.5)} }
+  #gate-voice-info { font-family:var(--font-mono); font-size:.6rem; color:var(--text-dim); text-align:center; line-height:1.9; }
+  #gate-voice-info span { color:var(--amber); }
+</style>
 </head>
 <body>
 
-    <header>
-        <div>
-            <h1>JuneVerse // <span>SonicLedger</span></h1>
-            <div class="tagline">RESEARCH • INNOVATE • TECHNOLOGY</div>
-        </div>
-        <div class="tagline">AUDIO-FIXED WALKING ASSIST</div>
-    </header>
+<header id="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#00ffcc" stroke-width="1.5">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke-width="1"/>
+      </svg>
+    </div>
+    <div>
+      <h1>VISIONPATH</h1>
+      <div class="ecosystem">JUNEVERSE ECOSYSTEM · AI NAVIGATION MODULE</div>
+    </div>
+  </div>
+  <div class="status-row">
+    <div class="status-chip">COCO-SSD v2.2</div>
+    <div class="status-chip">TF.js v4.17</div>
+    <div id="sys-status">STATUS: <span id="status-val">INITIALIZING</span></div>
+  </div>
+</header>
 
-    <main class="dashboard-grid">
-        <div class="panel">
-            <div class="panel-title">
-                LIVE PERCEPTION ENVIRONMENT
-                <span id="status-badge" style="color: #ef4444; font-size: 0.8rem; font-family: 'Space Mono';">• ENGINE ASLEEP</span>
-            </div>
-            
-            <div class="viewfinder-container">
-                <video id="webcam" autoplay playsinline muted></video>
-                <div class="lane-overlay">
-                    <div class="lane" id="lane-left" data-label="Left Lane"></div>
-                    <div class="lane" id="lane-center" data-label="Center Path"></div>
-                    <div class="lane" id="lane-right" data-label="Right Lane"></div>
-                </div>
-            </div>
+<div id="main">
+  <div id="video-pane">
+    <video id="cam-video" autoplay muted playsinline></video>
+    <canvas id="cam-canvas"></canvas>
+    <div id="lane-overlay">
+      <div class="lane-div" id="ld1"></div>
+      <div class="lane-div" id="ld2"></div>
+      <div class="lane-label" id="ll-left">LEFT</div>
+      <div class="lane-label" id="ll-center">CENTER</div>
+      <div class="lane-label" id="ll-right">RIGHT</div>
+    </div>
+    <div id="prox-bar"><div id="prox-fill"></div></div>
+    <div id="prox-label">PROXIMITY</div>
+    <div id="danger-flash"></div>
+    <div id="path-banner">
+      <div id="path-indicator"></div>
+      <div id="path-text">AWAITING CAMERA FEED…</div>
+    </div>
+    <div id="loader">
+      <div class="loader-ring"></div>
+      <p>LOADING AI MODEL</p>
+      <small>COCO-SSD · TensorFlow.js · initializing…</small>
+    </div>
+  </div>
 
-            <button class="btn" id="btn-start">ACTIVATE SYSTEM PERCEPTION</button>
-        </div>
+  <div id="terminal-panel">
+    <div class="t-section">
+      <div class="t-section-title">SPATIAL MATRIX — LANE STATUS</div>
+      <div id="lane-status">
+        <div class="lane-card clear" id="card-left"><div class="lc-name">LEFT LANE</div><div class="lc-status" id="lc-left">CLEAR</div></div>
+        <div class="lane-card clear" id="card-center"><div class="lc-name">CENTER LANE</div><div class="lc-status" id="lc-center">CLEAR</div></div>
+        <div class="lane-card clear" id="card-right"><div class="lc-name">RIGHT LANE</div><div class="lc-status" id="lc-right">CLEAR</div></div>
+      </div>
+    </div>
+    <div id="fps-bar">
+      <div class="fps-item">FPS: <span id="fps-val">--</span></div>
+      <div class="fps-item">OBJECTS: <span id="obj-count">0</span></div>
+      <div class="fps-item">HAZARDS: <span id="haz-count">0</span></div>
+      <div class="fps-item">CONFIDENCE: <span id="conf-avg">--%</span></div>
+      <div class="fps-item">FRAME: <span id="frame-count">0</span></div>
+    </div>
+    <div id="speech-box">
+      <div id="speech-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00ffcc" stroke-width="2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+      </div>
+      <div id="speech-text" class="idle">VOICE ASSISTANT IDLE — MONITORING PATH…</div>
+    </div>
+    <div id="detection-feed-wrap">
+      <div class="t-section" style="flex-shrink:0;padding-bottom:6px;">
+        <div class="t-section-title">LIVE PERCEPTION FEED</div>
+      </div>
+      <div id="detection-feed"></div>
+    </div>
+    <div id="wallet-panel">
+      <div class="t-section-title" style="margin-bottom:6px;">WEB3 NODE · JNV INCENTIVE LAYER</div>
+      <div id="wallet-addr">ADDR: <span id="wallet-key">generating…</span></div>
+      <div id="wallet-balance">
+        <div class="wb-label">WALLET BALANCE</div>
+        <div class="wb-value" id="jnv-balance">0.00 JNV</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div class="panel">
-            <div class="panel-title">DECENTRALIZED SPACE ACCOUNTABILITY MATRIX</div>
-            
-            <div class="web3-metric-card">
-                <div class="metric-row">
-                    <span>Wallet Identity Node:</span>
-                    <span class="metric-value" id="wallet-addr">Uninitialized</span>
-                </div>
-                <div class="metric-row">
-                    <span>Validation Reward Balance:</span>
-                    <span class="metric-value" id="wallet-bal">0.00 JNV</span>
-                </div>
-                <div class="metric-row">
-                    <span>Active Decentralized Block:</span>
-                    <span class="metric-value" id="ledger-block">#749,210</span>
-                </div>
-            </div>
+<!-- AUDIO GATE — browser requires a real click before any speech plays -->
+<div id="audio-gate">
+  <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#00ffcc" stroke-width="1.2">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+  </svg>
+  <h2>VISIONPATH VOICE NAVIGATOR</h2>
+  <p>Browsers require a click before playing audio.<br>
+     Press the button below to activate your AI voice guide.<br>
+     Detection is already running in the background.</p>
+  <button id="audio-gate-btn" onclick="activateGate()">&#9654;&nbsp;&nbsp;ACTIVATE VOICE GUIDE</button>
+  <div id="gate-voice-info">Voices found: <span id="gv-count">scanning…</span> &nbsp;|&nbsp; Profile: <span id="gv-name">scanning…</span></div>
+</div>
 
-            <div class="panel-title" style="font-size: 0.95rem; color: var(--text-muted);">LIVE ASSIST EVENT MONITOR LOG</div>
-            <div class="terminal-box" id="terminal">
-                <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Ready to mount software arrays...</div>
-            </div>
-        </div>
-    </main>
+<script>
+// ═══════════════════════════════════════════════════
+//  VISIONPATH — JuneVerse Navigation Engine
+// ═══════════════════════════════════════════════════
 
-    <script>
-        let web3;
-        let model;
-        let tokenBalance = 0.00;
-        let currentBlock = 749210;
-        
-        // Audio Synthesis Controller Reference Mapping
-        const synth = window.speechSynthesis;
-        let selectedVoice = null;
-        let lastSpokenTime = 0;
-        
-        const video = document.getElementById('webcam');
-        const terminal = document.getElementById('terminal');
-        const btnStart = document.getElementById('btn-start');
-        const statusBadge = document.getElementById('status-badge');
+const video        = document.getElementById('cam-video');
+const canvas       = document.getElementById('cam-canvas');
+const ctx          = canvas.getContext('2d');
+const loader       = document.getElementById('loader');
+const pathText     = document.getElementById('path-text');
+const pathIndicator= document.getElementById('path-indicator');
+const dangerFlash  = document.getElementById('danger-flash');
+const speechText   = document.getElementById('speech-text');
+const speechIcon   = document.getElementById('speech-icon');
+const detFeed      = document.getElementById('detection-feed');
+const fpsVal       = document.getElementById('fps-val');
+const objCount     = document.getElementById('obj-count');
+const hazCount     = document.getElementById('haz-count');
+const confAvg      = document.getElementById('conf-avg');
+const frameCount   = document.getElementById('frame-count');
+const lcLeft       = document.getElementById('lc-left');
+const lcCenter     = document.getElementById('lc-center');
+const lcRight      = document.getElementById('lc-right');
+const cardLeft     = document.getElementById('card-left');
+const cardCenter   = document.getElementById('card-center');
+const cardRight    = document.getElementById('card-right');
+const jnvBalance   = document.getElementById('jnv-balance');
+const proxFill     = document.getElementById('prox-fill');
+const statusVal    = document.getElementById('status-val');
+const walletKey    = document.getElementById('wallet-key');
 
-        // Pre-load browser voices asynchronously to protect system thread timing
-        function loadSystemVoices() {
-            let voices = synth.getVoices();
-            // Fallback selection to an English default module profile
-            selectedVoice = voices.find(v => v.lang.includes('en')) || voices[0];
-        }
-        loadSystemVoices();
-        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = loadSystemVoices;
-        }
+// ── State ────────────────────────────────────────────
+let model            = null;
+let detectionRunning = false;
+let lastSpeechTime   = 0;
+let lastSpokenMsg    = '';
+const THROTTLE_MS    = 3500;
+let jnvTokens        = 0;
+let frameIdx         = 0;
+let lastFrameTime    = performance.now();
+let fpsBuffer        = [];
+let audioEnabled     = false;
+let rafHandle        = null;
+let clearCenterFrames= 0;
 
-        function printLog(channel, msg) {
-            const time = new Date().toLocaleTimeString();
-            const element = document.createElement('div');
-            element.className = 'terminal-line';
-            element.innerHTML = `<span class="terminal-timestamp">[${time}] (${channel})</span> ${msg}`;
-            terminal.appendChild(element);
-            terminal.scrollTop = terminal.scrollHeight;
-        }
+const LANE_L = 0.333;
+const LANE_R = 0.666;
+const CONF   = 0.55;
 
-        function setupWeb3Node() {
-            web3 = new Web3();
-            const account = web3.eth.accounts.create();
-            document.getElementById('wallet-addr').innerText = account.address.substring(0,6) + "..." + account.address.substring(36);
-            printLog("WEB3", `Consensus node wallet created.`);
-        }
+// ── Wallet ───────────────────────────────────────────
+(function(){
+  let addr = '0x';
+  const h = '0123456789abcdef';
+  for(let i=0;i<40;i++) addr += h[Math.floor(Math.random()*16)];
+  walletKey.textContent = addr;
+})();
 
-        // Complete, Bulletproof Vocalization Framework Routine
-        function voiceGuide(objectLabel, safeAction) {
-            const now = Date.now();
-            
-            // Limit audio warning triggers to a maximum density profile of once every 4.5 seconds to avoid breaking audio loops
-            if (now - lastSpokenTime < 4500) return; 
+// ── Voice selection ──────────────────────────────────
+let chosenVoice = null;
 
-            // Hard reset speech buffer stack lines to wipe away lag jams
-            synth.cancel();
+const VOICE_PREFS = [
+  'google uk english female',
+  'google us english',
+  'microsoft aria online (natural)',
+  'microsoft jenny online (natural)',
+  'microsoft zira desktop',
+  'microsoft zira',
+  'samantha',
+  'karen',
+  'moira',
+  'tessa',
+  'fiona',
+  'female','woman'
+];
 
-            let textInstruction = `Notice. There is a ${objectLabel} blocking your center path. `;
-            if (safeAction === 'right') {
-                textInstruction += "Please turn right to bypass it.";
-            } else if (safeAction === 'left') {
-                textInstruction += "Please turn left to bypass it.";
-            } else {
-                textInstruction += "Path completely obstructed. Please stop.";
-            }
+function getBestVoice() {
+  const all = speechSynthesis.getVoices();
+  const en  = all.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+  for (const kw of VOICE_PREFS) {
+    const hit = en.find(v => v.name.toLowerCase().includes(kw));
+    if (hit) return hit;
+  }
+  return en[0] || all[0] || null;
+}
 
-            const utterance = new SpeechSynthesisUtterance(textInstruction);
-            if (selectedVoice) utterance.voice = selectedVoice;
-            utterance.rate = 0.95; // Human-friendly pace
-            utterance.volume = 1.0; // Enforce maximum volume configuration metrics
+function refreshVoiceInfo() {
+  const all = speechSynthesis.getVoices();
+  chosenVoice = getBestVoice();
+  document.getElementById('gv-count').textContent = all.length;
+  document.getElementById('gv-name').textContent  = chosenVoice ? chosenVoice.name : 'system default';
+}
 
-            // Handshake execution out loud
-            synth.speak(utterance);
-            lastSpokenTime = now;
-            printLog("VOCAL ENGINE", `Spoken out loud: "${textInstruction}"`);
-        }
+// Chrome fires this event when the voice list loads
+speechSynthesis.onvoiceschanged = refreshVoiceInfo;
+setTimeout(refreshVoiceInfo, 400);
+setTimeout(refreshVoiceInfo, 1500);
 
-        btnStart.addEventListener('click', async () => {
-            btnStart.disabled = true;
-            btnStart.innerText = "LOADING CORE SYSTEMS...";
-            statusBadge.innerText = "• COMPILING TENSORFLOW...";
-            statusBadge.style.color = "#3b82f6";
-            
-            // CRITICAL STEP: Explicit initial spoken trigger to unlock native sound engine privileges 
-            synth.cancel();
-            const handshakeUtterance = new SpeechSynthesisUtterance("JuneVerse system online. Scanning pathways.");
-            if (selectedVoice) handshakeUtterance.voice = selectedVoice;
-            synth.speak(handshakeUtterance);
-            printLog("VOCAL ENGINE", "Audio buffer handshake channel opened successfully.");
+// ── Audio gate ───────────────────────────────────────
+function activateGate() {
+  const gate = document.getElementById('audio-gate');
+  gate.style.opacity = '0';
+  gate.style.transition = 'opacity 0.35s';
+  setTimeout(() => gate.style.display = 'none', 380);
 
-            setupWeb3Node();
+  audioEnabled = true;
 
-            // Fire Camera Stream Access Pipelines
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: 640, height: 480 }, 
-                    audio: false 
-                });
-                video.srcObject = stream;
-                printLog("HARDWARE", "Camera active channel locked.");
-            } catch (err) {
-                printLog("ERROR", "Sensor array access blocked.");
-                alert("Webcam device permissions are mandatory for runtime processing execution.");
-                btnStart.disabled = false;
-                btnStart.innerText = "ACTIVATE SYSTEM";
-                return;
-            }
+  // This MUST happen synchronously inside the click handler to unlock
+  // the browser audio context. A near-silent dot fires first.
+  const unlock = new SpeechSynthesisUtterance('.');
+  unlock.volume = 0.001;
+  speechSynthesis.speak(unlock);
 
-            // Load COCO-SSD Vision model weights
-            try {
-                printLog("AI PIPELINE", "Downloading object tracking layers into page cache sandbox...");
-                model = await cocoSsd.load();
-                
-                printLog("AI PIPELINE", "Detection engine fully configured.");
-                statusBadge.innerText = "• ASSIST PIPELINE ACTIVE";
-                statusBadge.style.color = "var(--accent-green)";
-                btnStart.innerText = "SYSTEM ACTIVE";
-                
-                video.onloadeddata = () => {
-                    startPerceptionLoop();
-                };
-            } catch (err) {
-                printLog("ERROR", `AI pipeline boot fault: ${err.message}`);
-            }
-        });
+  // Wait a beat, clear, then speak the real greeting
+  setTimeout(() => {
+    speechSynthesis.cancel();
+    speakNow('Hello. Vision Path is now active. I am watching your path and will guide you around any obstacles.', true);
+  }, 350);
+}
 
-        function startPerceptionLoop() {
-            const laneLeft = document.getElementById('lane-left');
-            const laneCenter = document.getElementById('lane-center');
-            const laneRight = document.getElementById('lane-right');
+// Space bar also works
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    const gate = document.getElementById('audio-gate');
+    if (gate && gate.style.display !== 'none') activateGate();
+  }
+});
 
-            async function predictFrame() {
-                if (!model || video.paused || video.ended) {
-                    requestAnimationFrame(predictFrame);
-                    return;
-                }
+// ── Core speak function ──────────────────────────────
+function speakNow(msg, force) {
+  if (!audioEnabled) return;
+  const now = Date.now();
+  if (!force && now - lastSpeechTime < THROTTLE_MS) return;
+  if (!force && msg === lastSpokenMsg && now - lastSpeechTime < THROTTLE_MS * 2) return;
 
-                const predictions = await model.detect(video);
-                
-                let centerBlocked = false;
-                let leftBlocked = false;
-                let rightBlocked = false;
-                let activeObstacleItem = "";
+  speechSynthesis.cancel();
 
-                laneLeft.className = "lane";
-                laneCenter.className = "lane";
-                laneRight.className = "lane";
+  if (!chosenVoice) chosenVoice = getBestVoice();
 
-                predictions.forEach(prediction => {
-                    // Filter targets with validation confidence boundaries > 50%
-                    if (prediction.score > 0.50) {
-                        const [x, y, width, height] = prediction.bbox;
-                        const videoWidth = video.videoWidth || 640;
-                        const objectMidX = (x + (width / 2)) / videoWidth;
+  const u = new SpeechSynthesisUtterance(msg);
+  if (chosenVoice) u.voice = chosenVoice;
+  u.rate   = force ? 1.05 : 0.94;
+  u.pitch  = 1.15;
+  u.volume = 1.0;
+  u.lang   = chosenVoice ? chosenVoice.lang : 'en-US';
 
-                        // Lane partition logic boundaries mapping layout
-                        if (objectMidX > 0.33 && objectMidX < 0.66) {
-                            centerBlocked = true;
-                            activeObstacleItem = prediction.class;
-                            laneCenter.className = "lane active-block";
-                        } else if (objectMidX <= 0.33) {
-                            leftBlocked = true;
-                            laneLeft.className = "lane active-block";
-                        } else if (objectMidX >= 0.66) {
-                            rightBlocked = true;
-                            laneRight.className = "lane active-block";
-                        }
-                    }
-                });
+  u.onstart = () => {
+    speechIcon.classList.add('speaking');
+    speechText.classList.remove('idle');
+    speechText.textContent = '▶ ' + msg;
+  };
+  u.onend = u.onerror = () => {
+    speechIcon.classList.remove('speaking');
+    speechText.classList.add('idle');
+    speechText.textContent = 'VOICE ASSISTANT IDLE — MONITORING PATH…';
+  };
 
-                // Decision evaluation execution
-                if (centerBlocked) {
-                    let bypassRoute = 'none';
-                    if (!rightBlocked) {
-                        bypassRoute = 'right';
-                    } else if (!leftBlocked) {
-                        bypassRoute = 'left';
-                    }
+  speechSynthesis.speak(u);
+  lastSpeechTime = now;
+  lastSpokenMsg  = msg;
+}
 
-                    // Direct invocation call to our updated vocal routine system
-                    voiceGuide(activeObstacleItem, bypassRoute);
+// ── Feed log ─────────────────────────────────────────
+function logFeed(obj, lane, conf, isToken, isSys) {
+  const ts = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const row = document.createElement('div');
+  row.className = 'feed-entry';
+  if (isSys) {
+    row.innerHTML = `<span class="feed-ts">${ts}</span><span class="feed-sys">${obj}</span>`;
+  } else if (isToken) {
+    row.innerHTML = `<span class="feed-ts">${ts}</span><span class="feed-token">⬡ ${obj}</span>`;
+  } else {
+    const danger = lane === 'CENTER';
+    row.innerHTML = `<span class="feed-ts">${ts}</span><span class="feed-obj${danger?' danger':''}">${obj.toUpperCase()}</span><span class="feed-lane">[${lane}]</span><span class="feed-conf">${(conf*100).toFixed(0)}%</span>`;
+  }
+  detFeed.appendChild(row);
+  while (detFeed.children.length > 80) detFeed.removeChild(detFeed.firstChild);
+  detFeed.scrollTop = detFeed.scrollHeight;
+}
 
-                    // Web3 Ledger metric increment steps updates
-                    currentBlock += 1;
-                    tokenBalance += 0.75;
-                    document.getElementById('ledger-block').innerText = `#${currentBlock}`;
-                    document.getElementById('wallet-bal').innerText = `${tokenBalance.toFixed(2)} JNV`;
-                    printLog("LEDGER", `Verified transaction logged onto Block #${currentBlock}. Allocation +0.75 JNV payout.`);
-                }
+// ── Camera ───────────────────────────────────────────
+async function startCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:{width:{ideal:640},height:{ideal:480},facingMode:'environment'}, audio:false
+  });
+  video.srcObject = stream;
+  return new Promise(res => {
+    video.onloadedmetadata = () => { video.play(); res(); };
+  });
+}
 
-                setTimeout(() => {
-                    requestAnimationFrame(predictFrame);
-                }, 150); // Frame evaluations execution ticks every 150ms for performance safety profiles
-            }
+// ── Lane helpers ─────────────────────────────────────
+function getLane(cx, W) {
+  const n = 1 - (cx / W); // mirror
+  if (n < LANE_L) return 'LEFT';
+  if (n < LANE_R) return 'CENTER';
+  return 'RIGHT';
+}
 
-            predictFrame();
-        }
-    </script>
+function getProximity(y, h, H) {
+  return Math.min(1, (y + h) / H);
+}
+
+// ── Draw ─────────────────────────────────────────────
+function drawScene(preds, W, H) {
+  ctx.clearRect(0, 0, W, H);
+
+  // Lane tints
+  ctx.fillStyle = 'rgba(0,255,204,0.04)';
+  ctx.fillRect(0, 0, W * LANE_L, H);
+  ctx.fillStyle = 'rgba(0,255,204,0.06)';
+  ctx.fillRect(W * LANE_L, 0, W * (LANE_R - LANE_L), H);
+  ctx.fillStyle = 'rgba(0,255,204,0.04)';
+  ctx.fillRect(W * LANE_R, 0, W * (1 - LANE_R), H);
+
+  for (const p of preds) {
+    const [x, y, w, h] = p.bbox;
+    const mx   = W - x - w; // mirrored x
+    const lane = getLane(x + w/2, W);
+    const prox = getProximity(y, h, H);
+
+    let color = '#00ffcc';
+    if (lane === 'CENTER' && prox > 0.65) color = '#ff3366';
+    else if (lane === 'CENTER')           color = '#ffaa00';
+    else if (prox > 0.65)                 color = '#ffaa00';
+
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.shadowColor = color; ctx.shadowBlur = 10;
+    ctx.strokeRect(mx, y, w, h);
+
+    // Corner brackets
+    const cs = 12; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(mx,y+cs); ctx.lineTo(mx,y); ctx.lineTo(mx+cs,y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx+w-cs,y); ctx.lineTo(mx+w,y); ctx.lineTo(mx+w,y+cs); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx,y+h-cs); ctx.lineTo(mx,y+h); ctx.lineTo(mx+cs,y+h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx+w-cs,y+h); ctx.lineTo(mx+w,y+h); ctx.lineTo(mx+w,y+h-cs); ctx.stroke();
+
+    // Label
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = color; ctx.globalAlpha = 0.85;
+    ctx.fillRect(mx, y - 18, Math.max(w, 130), 18);
+    ctx.globalAlpha = 1; ctx.fillStyle = '#0b0f19';
+    ctx.font = 'bold 10px Share Tech Mono, monospace';
+    ctx.fillText(`${p.class.toUpperCase()}  ${(p.score*100).toFixed(0)}%  [${lane}]`, mx+4, y-5);
+
+    // Proximity dot
+    ctx.fillStyle = color; ctx.globalAlpha = 0.5 * prox;
+    ctx.beginPath(); ctx.arc(mx+w/2, y+h-8, 4+prox*8, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+function drawArrow(dir) {
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H*0.45, sz = 36;
+  ctx.save(); ctx.shadowBlur = 24;
+  if (dir === 'stop') {
+    ctx.shadowColor = '#ff3366'; ctx.strokeStyle = '#ff3366'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(cx,cy,sz,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx-sz*.6,cy-sz*.6); ctx.lineTo(cx+sz*.6,cy+sz*.6);
+    ctx.moveTo(cx+sz*.6,cy-sz*.6); ctx.lineTo(cx-sz*.6,cy+sz*.6);
+    ctx.stroke();
+  } else {
+    ctx.shadowColor = '#00ffcc'; ctx.strokeStyle = '#00ffcc'; ctx.fillStyle = 'rgba(0,255,204,.15)'; ctx.lineWidth = 3;
+    const ax = dir==='left' ? cx-sz*1.5 : dir==='right' ? cx+sz*1.5 : cx;
+    const ay = dir==='forward' ? cy-sz*1.2 : cy;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ax,ay); ctx.stroke();
+    const ang = Math.atan2(ay-cy,ax-cx), al = 22;
+    ctx.beginPath();
+    ctx.moveTo(ax,ay);
+    ctx.lineTo(ax-al*Math.cos(ang-.5),ay-al*Math.sin(ang-.5));
+    ctx.lineTo(ax-al*Math.cos(ang+.5),ay-al*Math.sin(ang+.5));
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ── Lane cards ───────────────────────────────────────
+function setCards(lb, cb, rb) {
+  function set(card, lbl, blocked) {
+    card.className = 'lane-card ' + (blocked ? 'blocked' : 'clear');
+    lbl.textContent = blocked ? 'BLOCKED' : 'CLEAR';
+  }
+  set(cardLeft, lcLeft, lb);
+  set(cardCenter, lcCenter, cb);
+  set(cardRight, lcRight, rb);
+}
+
+// ── Token reward ─────────────────────────────────────
+function awardJNV() {
+  jnvTokens += 0.5;
+  jnvBalance.textContent = jnvTokens.toFixed(2) + ' JNV';
+  jnvBalance.classList.add('bump');
+  setTimeout(() => jnvBalance.classList.remove('bump'), 600);
+  logFeed('+0.5 JNV Token Earned — node validation confirmed', '', 0, true);
+}
+
+// ── Analyse frame ────────────────────────────────────
+let seenObjects = new Set();
+
+function analyzeFrame(preds) {
+  const W = canvas.width, H = canvas.height;
+  const valid = preds.filter(p => p.score >= CONF);
+
+  let lb=false, cb=false, rb=false, maxProx=0, confSum=0, haz=0;
+  const nowSeen = new Set();
+
+  for (const p of valid) {
+    const [x,y,w,h] = p.bbox;
+    const lane = getLane(x+w/2, W);
+    const prox = getProximity(y, h, H);
+
+    if (lane==='LEFT')   lb = true;
+    if (lane==='CENTER') cb = true;
+    if (lane==='RIGHT')  rb = true;
+
+    maxProx = Math.max(maxProx, prox);
+    confSum += p.score;
+    if (lane==='CENTER') haz++;
+
+    const key = p.class+'-'+lane;
+    if (!seenObjects.has(key)) logFeed(p.class, lane, p.score);
+    nowSeen.add(key);
+  }
+  seenObjects = nowSeen;
+
+  objCount.textContent = valid.length;
+  hazCount.textContent = haz;
+  confAvg.textContent  = valid.length ? (confSum/valid.length*100).toFixed(0)+'%' : '--%';
+  proxFill.style.height = (maxProx*100).toFixed(0)+'%';
+
+  setCards(lb, cb, rb);
+  dangerFlash.classList.toggle('active', cb && maxProx > 0.55);
+
+  drawScene(valid, W, H);
+
+  // ── Navigation speech ─────────────────────────────
+  if (cb) {
+    clearCenterFrames = 0;
+    const lo = !lb, ro = !rb;
+    const centObjs = valid.filter(p=>getLane(p.bbox[0]+p.bbox[2]/2,W)==='CENTER').map(p=>p.class);
+    const obj = centObjs[0] || 'obstacle';
+
+    if (!lo && !ro) {
+      pathText.textContent = '⛔ DANGER — PATH COMPLETELY BLOCKED — STOP';
+      pathText.style.color = 'var(--red)';
+      pathIndicator.style.background = 'var(--red)';
+      pathIndicator.style.boxShadow  = 'var(--red-glow)';
+      drawArrow('stop');
+      speakNow('Danger. Path completely blocked. Please stop walking.', true);
+
+    } else {
+      const dir = lo ? 'left' : 'right';
+      pathText.textContent = `⚠ ${obj.toUpperCase()} AHEAD — MOVE ${dir.toUpperCase()}`;
+      pathText.style.color = 'var(--amber)';
+      pathIndicator.style.background = 'var(--amber)';
+      pathIndicator.style.boxShadow  = '0 0 8px var(--amber)';
+      drawArrow(dir);
+      speakNow(`There is a ${obj} directly ahead. Safest path is to move ${dir}.`, true);
+    }
+
+  } else {
+    clearCenterFrames++;
+    if (clearCenterFrames > 0 && clearCenterFrames % 5 === 0) awardJNV();
+
+    if (!lb && !rb) {
+      pathText.textContent = '✓ PATH CLEAR — PROCEED FORWARD';
+      pathText.style.color = 'var(--neon)';
+      pathIndicator.style.background = 'var(--neon)';
+      pathIndicator.style.boxShadow  = 'var(--neon-glow)';
+      drawArrow('forward');
+      if (Date.now() - lastSpeechTime > 7000) speakNow('Path is clear. Proceed straight forward.');
+
+    } else if (lb) {
+      pathText.textContent = '→ LEFT OBSTACLE — STAY RIGHT';
+      pathText.style.color = 'var(--amber)';
+      drawArrow('right');
+      speakNow('Obstacle on your left. Stay to the right.');
+
+    } else {
+      pathText.textContent = '← RIGHT OBSTACLE — STAY LEFT';
+      pathText.style.color = 'var(--amber)';
+      drawArrow('left');
+      speakNow('Obstacle on your right. Stay to the left.');
+    }
+  }
+}
+
+// ── FPS ──────────────────────────────────────────────
+function updateFPS() {
+  const now = performance.now();
+  fpsBuffer.push(1000 / (now - lastFrameTime));
+  lastFrameTime = now;
+  if (fpsBuffer.length > 20) fpsBuffer.shift();
+  fpsVal.textContent = (fpsBuffer.reduce((a,b)=>a+b,0)/fpsBuffer.length).toFixed(1);
+}
+
+// ── Perception loop ───────────────────────────────────
+async function perceptionLoop() {
+  if (!detectionRunning) return;
+  updateFPS();
+  frameIdx++;
+  frameCount.textContent = frameIdx;
+  if (video.readyState >= 2) {
+    try { analyzeFrame(await model.detect(video)); } catch(e) {}
+  }
+  rafHandle = requestAnimationFrame(perceptionLoop);
+}
+
+// ── Boot ─────────────────────────────────────────────
+async function init() {
+  statusVal.textContent = 'LOADING MODEL';
+  statusVal.style.color = 'var(--amber)';
+  try {
+    logFeed('Starting camera…', '', 0, false, true);
+    await startCamera();
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    logFeed('Camera ready. Loading COCO-SSD…', '', 0, false, true);
+
+    model = await cocoSsd.load({ base: 'mobilenet_v2' });
+    logFeed('Model loaded. Perception engine active.', '', 0, false, true);
+
+    loader.style.opacity = '0'; loader.style.transition = 'opacity 0.5s';
+    setTimeout(() => loader.style.display = 'none', 500);
+    statusVal.textContent = 'ACTIVE';
+    statusVal.style.color = 'var(--neon)';
+
+    detectionRunning = true;
+    perceptionLoop();
+  } catch(err) {
+    loader.innerHTML = `<div style="color:#ff3366;font-family:'Orbitron',sans-serif;font-size:.8rem;letter-spacing:2px;text-align:center;">
+      INIT FAILED<br><small style="color:#4a6070;font-size:.6rem">${err.message}</small><br>
+      <small style="color:#4a6070;font-size:.55rem;display:block;margin-top:8px">Allow camera · use HTTPS or localhost</small></div>`;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    detectionRunning = false;
+    if (rafHandle) cancelAnimationFrame(rafHandle);
+    speechSynthesis.cancel();
+  } else if (model) {
+    detectionRunning = true;
+    perceptionLoop();
+  }
+});
+
+window.addEventListener('load', init);
+</script>
 </body>
 </html>
