@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KinetiLink — Advanced Assistive Navigation Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --bg-main:       #080c14;
+    --bg-surface:    #0f1524;
+    --bg-card:       #172033;
+    --border-color:  #263554;
+    
+    /* High Contrast Clinical Theme Colors */
+    --brand-blue:    #2563eb;
+    --brand-glow:    0 0 16px rgba(37, 99, 235, 0.4);
+    --emerald:       #10b981;
+    --emerald-glow:  0 0 16px rgba(16, 185, 129, 0.4);
+    --amber:         #f59e0b;
+    --amber-glow:    0 0 16px rgba(245, 158, 11, 0.4);
+    --crimson:       #ef4444;
+    --crimson-glow:  0 0 20px rgba(239, 68, 68, 0.6);
+    
+    --text-primary:  #f9fafb;
+    --text-secondary:#9ca3af;
+    --text-muted:    #4b5563;
+    
+    --font-sans:     'Inter', sans-serif;
+    --font-mono:     'JetBrains Mono', monospace;
+  }
+
+  html, body { width: 100%; height: 100%; background: var(--bg-main); color: var(--text-primary); font-family: var(--font-sans); overflow: hidden; }
+
+  /* MASTER HEADER BLOCK */
+  #app-header {
+    position: relative; z-index: 10; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; border-bottom: 1px solid var(--border-color);
+    background: var(--bg-surface);
+  }
+  .brand-group { display: flex; align-items: center; gap: 12px; }
+  .brand-logo {
+    width: 32px; height: 32px; background: var(--brand-blue);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--brand-glow);
+  }
+  .brand-logo svg { width: 18px; height: 18px; stroke: #ffffff; fill: none; }
+  .brand-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.025em; }
+  .brand-subtitle { font-size: 0.72rem; color: #6366f1; font-weight: 600; margin-top: 1px; text-transform: uppercase; letter-spacing: 0.05em; }
+  
+  .system-meta { display: flex; align-items: center; gap: 12px; }
+  .meta-badge { font-family: var(--font-mono); font-size: 0.7rem; padding: 4px 10px; background: #111c30; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-secondary); }
+  #sys-status-indicator { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); display: inline-block; }
+  .status-dot.active { background: var(--emerald); box-shadow: var(--emerald-glow); animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+  /* TWO-COLUMN ENTERPRISE GRID */
+  #dashboard-main { display: grid; grid-template-columns: 660px 1fr; height: calc(100vh - 64px); }
+
+  /* TELEMETRY ENGINE VIEWPORT */
+  #viewport-container { position: relative; background: #000000; overflow: hidden; border-right: 1px solid var(--border-color); }
+  #cam-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+  #cam-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+  
+  /* SCANNING BOUNDARY OVERLAYS */
+  .lane-separator { height: 100%; width: 1px; background: rgba(255, 255, 255, 0.12); position: absolute; z-index: 2; border-left: 1px dashed rgba(255,255,255,0.08); }
+  #sep-1 { left: 33.33%; } #sep-2 { left: 66.66%; }
+  .lane-header { position: absolute; top: 16px; font-family: var(--font-sans); font-weight: 600; font-size: 0.7rem; color: rgba(255, 255, 255, 0.3); width: 33.33%; text-align: center; letter-spacing: 0.05em; z-index: 3; }
+  #hdr-left { left: 0%; } #hdr-center { left: 33.33%; } #hdr-right { left: 66.66%; }
+  
+  #navigation-strip { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px 20px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 14px; z-index: 10; }
+  #nav-status-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--brand-blue); box-shadow: var(--brand-glow); flex-shrink: 0; transition: background-color 0.1s; }
+  #nav-instruction-text { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
+  
+  /* DEPLOYMENT PROGRESS OVERLAY */
+  #system-loader { position: absolute; inset: 0; background: var(--bg-main); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 100; }
+  .spinner { width: 42px; height: 42px; border: 3px solid rgba(37, 99, 235, 0.1); border-top-color: var(--brand-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #system-loader p { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); letter-spacing: 0.02em; }
+  #system-loader small { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); }
+  
+  #alert-perimeter { position: absolute; inset: 0; pointer-events: none; border: 0px solid transparent; transition: border-width 0.1s, border-color 0.1s, background-color 0.1s; z-index: 40; }
+  #alert-perimeter.triggered { border: 8px solid var(--crimson); background: rgba(239, 68, 68, 0.15); }
+  
+  /* LATERAL VERTICAL METRIC BARS */
+  #proximity-index { position: absolute; top: 40px; right: 16px; width: 10px; height: calc(100% - 120px); background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; z-index: 10; }
+  #proximity-depth-fill { position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, var(--crimson), var(--amber), var(--brand-blue)); transition: height 0.1s ease; height: 0%; }
+  #proximity-tag { position: absolute; top: 40px; right: 32px; font-size: 0.58rem; font-weight: 700; color: var(--text-secondary); writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.1em; z-index: 10; }
+
+  /* CONTROL ARCHITECTURE PANEL */
+  #control-panel { display: flex; flex-direction: column; background: var(--bg-surface); overflow: hidden; }
+  .panel-section { border-bottom: 1px solid var(--border-color); padding: 16px 24px; }
+  .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+  
+  #matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .matrix-node { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px 12px; text-align: center; transition: all 0.15s ease; }
+  .matrix-node .node-title { font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; letter-spacing: 0.02em; }
+  .matrix-node .node-state { font-size: 0.88rem; font-weight: 700; color: var(--emerald); }
+  .matrix-node.obstructed { border-color: var(--crimson); background: rgba(239, 68, 68, 0.05); box-shadow: inset 0 0 8px rgba(239, 68, 68, 0.1); }
+  .matrix-node.obstructed .node-state { color: var(--crimson); }
+  
+  /* UNIQUE ENVIRONMENTAL TELEMETRY CARDS */
+  #assistive-features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .feat-card { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .feat-meta-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); }
+  .feat-meta-val { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--brand-blue); }
+  .feat-meta-val.warn { color: var(--amber); }
+
+  #telemetry-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 10px 24px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+  .telemetry-datapoint { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-secondary); }
+  .telemetry-datapoint span { color: var(--brand-blue); font-weight: 600; }
+  
+  #comms-bus { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--border-color); background: #131b2e; }
+  #comms-indicator { width: 24px; height: 24px; flex-shrink: 0; border-radius: 4px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; }
+  #comms-indicator.active { background: rgba(37, 99, 235, 0.2); border-color: var(--brand-blue); animation: audioPulse 0.5s infinite alternate; }
+  @keyframes audioPulse { from { opacity: 0.7; } to { opacity: 1; } }
+  #comms-output-string { font-size: 0.78rem; font-weight: 600; color: #60a5fa; line-height: 1.4; }
+  #comms-output-string.stale { color: var(--text-muted); font-weight: 400; }
+  
+  #terminal-logger-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  #terminal-logger { flex: 1; overflow-y: auto; padding: 12px 24px; font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.6; background: #0b101a; }
+  .log-row { display: flex; gap: 12px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.01); }
+  .log-time { color: var(--text-muted); flex-shrink: 0; }
+  .log-tag { font-weight: 600; color: var(--brand-blue); }
+  .log-tag.alert { color: var(--crimson); }
+  .log-tag.intercept { color: var(--amber); }
+  .log-msg { color: var(--text-primary); }
+  .log-msg.system { color: #6b7280; font-style: italic; }
+  .log-msg.network { color: var(--emerald); }
+  
+  #node-ledger-panel { padding: 14px 24px; background: #0c1221; border-top: 1px solid var(--border-color); flex-shrink: 0; }
+  #node-identifier { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px; }
+  #node-identifier span { color: var(--text-secondary); }
+  #ledger-balance-row { display: flex; align-items: center; justify-content: space-between; }
+  .ledger-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); }
+  .ledger-value { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700; color: var(--emerald); }
+
+  /* BROWSER INTERACTION AUDIO GATE */
+  #interaction-gate {
+    position: fixed; inset: 0; background: var(--bg-main); z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+  }
+  #interaction-gate h2 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-primary); }
+  #interaction-gate p { font-size: 0.85rem; color: var(--text-secondary); text-align: center; max-width: 460px; line-height: 1.6; padding: 0 24px; }
+  #gate-auth-btn {
+    padding: 14px 36px; background: var(--brand-blue); border: none; border-radius: 6px;
+    color: #ffffff; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.15s;
+    box-shadow: var(--brand-glow); letter-spacing: 0.02em;
+  }
+  #gate-auth-btn:hover { background: #1d4ed8; }
+  #gate-diagnostics { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); text-align: center; }
+  #gate-diagnostics span { color: var(--amber); }
+</style>
+</head>
+<body>
+
+<header id="app-header">
+  <div class="brand-group">
+    <div class="brand-logo">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-title">KinetiLink</div>
+      <div class="brand-subtitle">Ultra-Latency Assistive Navigation Array</div>
+    </div>
+  </div>
+  <div class="system-meta">
+    <div class="meta-badge">INTERRUPT_MODE_ACTIVE</div>
+    <div class="meta-badge">TF.js 4.17 Core</div>
+    <div id="sys-status-indicator"><div class="status-dot" id="sys-dot"></div><span>ENGINE OFFLINE</span></div>
+  </div>
+</header>
+
+<div id="dashboard-main">
+  <div id="viewport-container">
+    <video id="cam-video" autoplay muted playsinline></video>
+    <canvas id="cam-canvas"></canvas>
+    <div id="lane-mask-overlay">
+      <div class="lane-separator" id="sep-1"></div>
+      <div class="lane-separator" id="sep-2"></div>
+      <div class="lane-header" id="hdr-left">LEFT MATRIX</div>
+      <div class="lane-header" id="hdr-center">CENTER INTERCEPT</div>
+      <div class="lane-header" id="hdr-right">RIGHT MATRIX</div>
+    </div>
+    <div id="proximity-index"><div id="proximity-depth-fill"></div></div>
+    <div id="proximity-tag">PROXIMITY VALUE</div>
+    <div id="alert-perimeter"></div>
+    <div id="navigation-strip">
+      <div id="nav-status-indicator"></div>
+      <div id="nav-instruction-text">BOOTING TELEMETRY STACKS...</div>
+    </div>
+    <div id="system-loader">
+      <div class="spinner"></div>
+      <p>MAPPING COMPUTER VISION MODEL MATRIX</p>
+      <small>Local Sandbox Execution · Allocating Realtime Buffers</small>
+    </div>
+  </div>
+
+  <div id="control-panel">
+    <div class="panel-section">
+      <div class="section-label">Realtime Spatial Telemetry Channels</div>
+      <div id="matrix-grid">
+        <div class="matrix-node clear" id="node-left"><div class="node-title">LEFT PATHWAY</div><div class="node-state" id="lbl-left">NOMINAL</div></div>
+        <div class="matrix-node clear" id="node-center"><div class="node-title">CENTER PATHWAY</div><div class="node-state" id="lbl-center">NOMINAL</div></div>
+        <div class="matrix-node clear" id="node-right"><div class="node-title">RIGHT PATHWAY</div><div class="node-state" id="lbl-right">NOMINAL</div></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Unique Assistive Environment Diagnostics</div>
+      <div id="assistive-features-grid">
+        <div class="feat-card">
+          <span class="feat-meta-label">Spatial Enclosure Density</span>
+          <span class="feat-meta-val" id="val-enclosure">OPEN SPACE</span>
+        </div>
+        <div class="feat-card">
+          <span class="feat-meta-label">Ambient Exposure Index</span>
+          <span class="feat-meta-val" id="val-ambient">STABLE</span>
+        </div>
+      </div>
+    </div>
+    
+    <div id="telemetry-bar">
+      <div class="telemetry-datapoint">ENGINE FPS: <span id="val-fps">0.0</span></div>
+      <div class="telemetry-datapoint">TARGET COUNTER: <span id="val-objects">0</span></div>
+      <div class="telemetry-datapoint">CENTER THREATS: <span id="val-hazards">0</span></div>
+      <div class="telemetry-datapoint">ACCURACY INDEX: <span id="val-conf">--%</span></div>
+      <div class="telemetry-datapoint">FRAME CYCLE: #<span id="val-frames">0</span></div>
+    </div>
+    
+    <div id="comms-bus">
+      <div id="comms-indicator">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+      </div>
+      <div id="comms-output-string" class="stale">AUDIO OUTPUT STANDBY — LOW LATENCY PASSIVE STREAM</div>
+    </div>
+    
+    <div id="terminal-logger-wrap">
+      <div class="panel-section" style="flex-shrink:0; padding-bottom:4px; border-bottom:none;">
+        <div class="section-label">Hardware Event Log Realtime Loop</div>
+      </div>
+      <div id="terminal-logger"></div>
+    </div>
+    
+    <div id="node-ledger-panel">
+      <div class="section-label" style="margin-bottom:6px;">Decentralized Infrastructure Verification Node</div>
+      <div id="node-identifier">NODE KEY: <span id="val-node-key">initializing secure keys...</span></div>
+      <div id="ledger-balance-row">
+        <div class="ledger-label">DATA POOL COMPENSATION METRIC</div>
+        <div class="ledger-value" id="val-token-balance">0.00 JNV</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="interaction-gate">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </svg>
+  <h2>Initialize KinetiLink Audio Core</h2>
+  <p>To support immediate zero-delay navigation cues for visually impaired operators, browsers require explicit user acknowledgment to unlock high-priority client-side audio streams.</p>
+  <button id="gate-auth-btn" onclick="authorizeAudioBus()">INITIALIZE ZERO-DELAY PIPELINE</button>
+  <div id="gate-diagnostics">Platform Voices Found: <span id="diag-count">scanning...</span> &nbsp;|&nbsp; Current Driver: <span id="diag-engine">scanning...</span></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  KINETILINK ASSISTIVE ENGINE ENGINE CORE
+// ═══════════════════════════════════════════════════
+
+const video         = document.getElementById('cam-video');
+const canvas        = document.getElementById('cam-canvas');
+const ctx           = canvas.getContext('2d');
+const loader        = document.getElementById('system-loader');
+const pathText      = document.getElementById('nav-instruction-text');
+const pathIndicator = document.getElementById('nav-status-indicator');
+const dangerPerim   = document.getElementById('alert-perimeter');
+const speechText    = document.getElementById('comms-output-string');
+const speechIcon    = document.getElementById('comms-indicator');
+const termLogger    = document.getElementById('terminal-logger');
+const valFps        = document.getElementById('val-fps');
+const valObjects    = document.getElementById('val-objects');
+const valHazards    = document.getElementById('val-hazards');
+const valConf       = document.getElementById('val-conf');
+const valFrames     = document.getElementById('val-frames');
+const lblLeft       = document.getElementById('lbl-left');
+const lblCenter     = document.getElementById('lbl-center');
+const lblRight      = document.getElementById('lbl-right');
+const nodeLeft      = document.getElementById('node-left');
+const nodeCenter    = document.getElementById('node-center');
+const nodeRight     = document.getElementById('node-right');
+const tokenBalance  = document.getElementById('val-token-balance');
+const depthFill     = document.getElementById('proximity-depth-fill');
+const sysStatusVal  = document.getElementById('sys-status-indicator');
+const sysDot        = document.getElementById('sys-dot');
+const nodeKey       = document.getElementById('val-node-key');
+
+// Advanced Assistive Telemetry Elements
+const valEnclosure  = document.getElementById('val-enclosure');
+const valAmbient    = document.getElementById('val-ambient');
+
+// ── Application System State Engine ──────────────────
+let model            = null;
+let detectionRunning = false;
+let lastSpeechTime    = 0;
+let lastSpokenMsg     = '';
+const THROTTLE_MS    = 4000; 
+let jnvTokens        = 0;
+let frameIdx         = 0;
+let lastFrameTime    = performance.now();
+let fpsBuffer        = [];
+let audioEnabled     = false;
+let rafHandle        = null;
+let clearCenterFrames= 0;
+
+// Native Synthetic Audio Beep Generator for Proximity Warnings
+let audioCtx         = null;
+
+const LANE_L = 0.3333;
+const LANE_R = 0.6666;
+const CONF   = 0.50; // Precision metric verification ceiling
+
+// ── Secure Hardware Identification Hashing ────────────
+(function generateNodeHash(){
+  let addr = '0x';
+  const hexChars = '0123456789ABCDEF';
+  for(let i=0; i<40; i++) addr += hexChars[Math.floor(Math.random()*16)];
+  nodeKey.textContent = addr.substring(0,8) + '...' + addr.substring(34);
+})();
+
+// ── Voice Synthesis Configuration Modules ────────────
+let preferredVoice = null;
+const AUDIO_NODES = [
+  'google uk english female',
+  'microsoft jenny online (natural)',
+  'samantha',
+  'hazel',
+  'google us english',
+  'female'
+];
+
+function selectVoiceNode() {
+  const allVoices = speechSynthesis.getVoices();
+  const enVoices = allVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+  for (const identifier of AUDIO_NODES) {
+    const matchedNode = enVoices.find(v => v.name.toLowerCase().includes(identifier));
+    if (matchedNode) return matchedNode;
+  }
+  return enVoices[0] || allVoices[0] || null;
+}
+
+function processDiagnostics() {
+  const currentStack = speechSynthesis.getVoices();
+  preferredVoice = selectVoiceNode();
+  document.getElementById('diag-count').textContent = currentStack.length;
+  document.getElementById('diag-engine').textContent = preferredVoice ? preferredVoice.name : 'System Fallback Profile';
+}
+
+speechSynthesis.onvoiceschanged = processDiagnostics;
+setTimeout(processDiagnostics, 300);
+
+// ── Interactive Core Activation Gateway ───────────────
+function authorizeAudioBus() {
+  const gateElement = document.getElementById('interaction-gate');
+  gateElement.style.opacity = '0';
+  gateElement.style.transition = 'opacity 0.2s ease';
+  setTimeout(() => gateElement.style.display = 'none', 200);
+
+  audioEnabled = true;
+
+  // Wake up Web Audio API Context for ultrasonic click generation
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch(e) {
+    console.error("AudioContext initialization failure", e);
+  }
+
+  // Clear focus block constraint paths instantly
+  const wakeSignal = new SpeechSynthesisUtterance('.');
+  wakeSignal.volume = 0.001;
+  speechSynthesis.speak(wakeSignal);
+
+  setTimeout(() => {
+    speechSynthesis.cancel();
+    dispatchAcousticCue('KinetiLink spatial monitoring framework running successfully. Zero delay interrupt channel is online.', true);
+  }, 200);
+}
+
+// ── Zero-Latency Haptic Echo Simulator (Beep) ─────────
+let lastBeepTime = 0;
+function triggerHapticEcho(proximityValue) {
+  if (!audioCtx || !audioEnabled) return;
+  const now = Date.now();
+  
+  // Speed up click frequency as danger structural proximity increases
+  let interval = 800;
+  if (proximityValue > 0.85) interval = 200;
+  else if (proximityValue > 0.70) interval = 450;
+  
+  if (now - lastBeepTime < interval) return;
+  lastBeepTime = now;
+
+  try {
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(proximityValue > 0.85 ? 880 : 520, audioCtx.currentTime); // Higher pitch for critical proximity
+    
+    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+    
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.08);
+  } catch(e) {}
+}
+
+// ── Instant Interrupt Speech Dispatch Pipeline ─────────
+function dispatchAcousticCue(msg, immediateForce) {
+  if (!audioEnabled) return;
+  const timestampNow = Date.now();
+
+  // If immediateForce is declared (e.g., center obstacle detected), purge audio buffer and execute immediately
+  if (immediateForce) {
+    if (msg !== lastSpokenMsg || (timestampNow - lastSpeechTime > 800)) {
+      speechSynthesis.cancel(); // HARD FLUSH OF CURRENT BUFFER
+      const timeStr = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const logRow = document.createElement('div');
+      logRow.className = 'log-row';
+      logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-tag intercept">[INTERRUPT]</span><span class="log-msg" style="color:var(--amber)">Zero-delay cue bypass executed. Purged speech stack.</span>`;
+      termLogger.appendChild(logRow);
+    } else {
+      return; // Anti-stutter protection loop block
+    }
+  } else {
+    // Standard system metrics pacing engine checks
+    if (timestampNow - lastSpeechTime < THROTTLE_MS) return;
+    if (msg === lastSpokenMsg && timestampNow - lastSpeechTime < THROTTLE_MS * 2) return;
+  }
+
+  if (!preferredVoice) preferredVoice = selectVoiceNode();
+
+  const utteranceInstance = new SpeechSynthesisUtterance(msg);
+  if (preferredVoice) utteranceInstance.voice = preferredVoice;
+  
+  // Custom calibrations targeted for optimal auditory parsing under noise conditions
+  utteranceInstance.rate   = 1.05;  
+  utteranceInstance.pitch  = 1.10;  
+  utteranceInstance.volume = 1.0;
+
+  utteranceInstance.onstart = () => {
+    speechIcon.classList.add('active');
+    speechText.classList.remove('stale');
+    speechText.textContent = 'BUS OUT -> ' + msg.toUpperCase();
+  };
+  utteranceInstance.onend = utteranceInstance.onerror = () => {
+    speechIcon.classList.remove('active');
+    speechText.classList.add('stale');
+    speechText.textContent = 'AUDIO OUTPUT STANDBY — LOW LATENCY PASSIVE STREAM';
+  };
+
+  speechSynthesis.speak(utteranceInstance);
+  lastSpeechTime = timestampNow;
+  lastSpokenMsg  = msg;
+}
+
+// ── Logging Interface Controller ─────────────────────
+function writeConsoleLog(objectLabel, sectorName, validationScore, structuralFlag, initializationFlag) {
+  const timeStr = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const logRow = document.createElement('div');
+  logRow.className = 'log-row';
+  
+  if (initializationFlag) {
+    logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg system">[SYS_BOOT] ${objectLabel}</span>`;
+  } else if (structuralFlag) {
+    logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg network">[NET_VERIFY] ${objectLabel}</span>`;
+  } else {
+    const dangerActive = sectorName === 'CENTER INTERCEPT';
+    logRow.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-tag${dangerActive?' alert':''}">[TRACK_ID]</span><span class="log-msg">Target '${objectLabel.toUpperCase()}' bound to ${sectorName} at ${(validationScore*100).toFixed(0)}% accuracy.</span>`;
+  }
+  termLogger.appendChild(logRow);
+  while (termLogger.children.length > 40) termLogger.removeChild(termLogger.firstChild);
+  termLogger.scrollTop = termLogger.scrollHeight;
+}
+
+// ── Native Hardware Initialization Stream ────────────
+async function activateVideoArray() {
+  const mediaStream = await navigator.mediaDevices.getUserMedia({
+    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false
+  });
+  video.srcObject = mediaStream;
+  return new Promise(resolve => {
+    video.onloadedmetadata = () => { video.play(); resolve(); };
+  });
+}
+
+function processTargetLane(centerX, viewportWidth) {
+  const normalX = 1 - (centerX / viewportWidth); // Compensate for reflected camera input matrices
+  if (normalX < LANE_L) return 'LEFT';
+  if (normalX < LANE_R) return 'CENTER';
+  return 'RIGHT';
+}
+
+function processTargetProximity(yBound, heightBound, totalHeight) {
+  return Math.min(1, (yBound + heightBound) / totalHeight);
+}
+
+// ── Unique Ambient Lux Exposure Calculation ────────────
+function calculateAmbientExposure(width, height) {
+  try {
+    const frameData = ctx.getImageData(0, 0, width, height).data;
+    let brightnessSum = 0;
+    // Fast skip-sampling algorithm loop for high frame efficiency
+    for (let i = 0; i < frameData.length; i += 40) {
+      brightnessSum += (frameData[i] + frameData[i+1] + frameData[i+2]) / 3;
+    }
+    const meanBrightness = brightnessSum / (frameData.length / 40);
+    
+    if (meanBrightness < 35) {
+      valAmbient.textContent = 'LOW EXPOSURE (DARK)';
+      valAmbient.className = 'feat-meta-val warn';
+      return 'dark';
+    } else if (meanBrightness > 220) {
+      valAmbient.textContent = 'HIGH EXPOSURE (GLARE)';
+      valAmbient.className = 'feat-meta-val warn';
+      return 'glare';
+    } else {
+      valAmbient.textContent = 'STABLE LUMINANCE';
+      valAmbient.className = 'feat-meta-val';
+      return 'stable';
+    }
+  } catch(e) { return 'stable'; }
+}
+
+// ── Architectural Wireframe Matrix Rendering ──────────
+function drawVectorMatrix(detections, canvasWidth, canvasHeight) {
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+  // Structural column layouts
+  ctx.fillStyle = 'rgba(255,255,255,0.01)';
+  ctx.fillRect(0, 0, canvasWidth * LANE_L, canvasHeight);
+  ctx.fillStyle = 'rgba(255,255,255,0.02)';
+  ctx.fillRect(canvasWidth * LANE_L, 0, canvasWidth * (LANE_R - LANE_L), canvasHeight);
+  ctx.fillStyle = 'rgba(255,255,255,0.01)';
+  ctx.fillRect(canvasWidth * LANE_R, 0, canvasWidth * (1 - LANE_R), canvasHeight);
+
+  for (const item of detections) {
+    const [x, y, w, h] = item.bbox;
+    const flippedX = canvasWidth - x - w; 
+    const assignedLane = processTargetLane(x + w/2, canvasWidth);
+    const calculatedProx = processTargetProximity(y, h, canvasHeight);
+
+    let diagnosticColor = '#2563eb'; 
+    if (assignedLane === 'CENTER' && calculatedProx > 0.65) diagnosticColor = '#ef4444';
+    else if (assignedLane === 'CENTER' || calculatedProx > 0.65) diagnosticColor = '#f59e0b';
+
+    ctx.save();
+    ctx.strokeStyle = diagnosticColor; 
+    ctx.lineWidth = 2;
+    ctx.strokeRect(flippedX, y, w, h);
+
+    // Text Metric Metadata Strips
+    ctx.fillStyle = diagnosticColor;
+    ctx.fillRect(flippedX, y - 18, Math.max(w, 130), 18);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 10px JetBrains Mono, monospace';
+    ctx.fillText(`${item.class.toUpperCase()} [${(calculatedProx*100).toFixed(0)}% PROX]`, flippedX + 6, y - 5);
+    ctx.restore();
+  }
+}
+
+function processInterfaceMatrix(leftBlock, centerBlock, rightBlock) {
+  function applyNodeState(nodeContainer, labelElement, stateIsObstructed) {
+    nodeContainer.className = 'matrix-node ' + (stateIsObstructed ? 'obstructed' : 'clear');
+    labelElement.textContent = stateIsObstructed ? 'OBSTRUCTED' : 'NOMINAL';
+  }
+  applyNodeState(nodeLeft, lblLeft, leftBlock);
+  applyNodeState(nodeCenter, lblCenter, centerBlock);
+  applyNodeState(nodeRight, lblRight, rightBlock);
+}
+
+function commitLedgerValidation() {
+  jnvTokens += 0.50;
+  tokenBalance.textContent = jnvTokens.toFixed(2) + ' JNV';
+  writeConsoleLog('Data ecosystem verify cycle complete. Credited (+0.50 JNV).', '', 0, true, false);
+}
+
+// ── Spatial Engine Logic Calculations ──────────────────
+let historicalBuffer = new Set();
+let ambientCheckCounter = 0;
+
+function interpretSpatialArray(predictions) {
+  const widthBoundary = canvas.width, heightBoundary = canvas.height;
+  const filteredDetections = predictions.filter(p => p.score >= CONF);
+
+  let leftLoom = false, centerLoom = false, rightLoom = false;
+  let highestProxSeen = 0, validationAccumulator = 0, hazardsCounter = 0;
+  const localTrackingMap = new Set();
+
+  // Run Ambient Lux check once every 10 frames to optimize processor overhead
+  ambientCheckCounter++;
+  if (ambientCheckCounter % 10 === 0) {
+    const ambientState = calculateAmbientExposure(widthBoundary, heightBoundary);
+    if (ambientState === 'dark') dispatchAcousticCue('Warning. Ambient light level dropped significantly. Sudden darkness detected.');
+    if (ambientState === 'glare') dispatchAcousticCue('Warning. Sudden blinding glare exposure detected.');
+  }
+
+  // ── Enclosure Structural Density Feature ───────────
+  // Calculated via total tracking density volume indexes 
+  if (filteredDetections.length >= 4) {
+    valEnclosure.textContent = 'HIGH ENCLOSURE (CONFINED)';
+    valEnclosure.className = 'feat-meta-val warn';
+  } else {
+    valEnclosure.textContent = 'OPEN PATH';
+    valEnclosure.className = 'feat-meta-val';
+  }
+
+  for (const object of filteredDetections) {
+    const [x, y, w, h] = object.bbox;
+    const targetedSector = processTargetLane(x + w/2, widthBoundary);
+    const computedDepth  = processTargetProximity(y, h, heightBoundary);
+
+    if (targetedSector === 'LEFT')   leftLoom = true;
+    if (targetedSector === 'CENTER') centerLoom = true;
+    if (targetedSector === 'RIGHT')  rightLoom = true;
+
+    highestProxSeen = Math.max(highestProxSeen, computedDepth);
+    validationAccumulator += object.score;
+    if (targetedSector === 'CENTER') hazardsCounter++;
+
+    const mapIdentifierKey = object.class + '-' + targetedSector;
+    if (!historicalBuffer.has(mapIdentifierKey)) writeConsoleLog(object.class, targetedSector === 'CENTER' ? 'CENTER INTERCEPT' : targetedSector, object.score, false, false);
+    localTrackingMap.add(mapIdentifierKey);
+  }
+  historicalBuffer = localTrackingMap;
+
+  valObjects.textContent = filteredDetections.length;
+  valHazards.textContent = hazardsCounter;
+  valConf.textContent    = filteredDetections.length ? (validationAccumulator / filteredDetections.length * 100).toFixed(0) + '%' : '--%';
+  depthFill.style.height = (highestProxSeen * 100).toFixed(0) + '%';
+
+  processInterfaceMatrix(leftLoom, centerLoom, rightLoom);
+  
+  const criticalThreatLevel = centerLoom && highestProxSeen > 0.55;
+  dangerPerim.className = criticalThreatLevel ? 'triggered' : '';
+
+  // Fire echo click generators if an object steps inside dangerous proximity levels
+  if (highestProxSeen > 0.50) {
+    triggerHapticEcho(highestProxSeen);
+  }
+
+  drawVectorMatrix(filteredDetections, widthBoundary, heightBoundary);
+
+  // ── ADVANCED ACTIVE CLEAR ESCAPE ROUTE ROUTING ENGINE ──
+  if (centerLoom) {
+    clearCenterFrames = 0;
+    
+    // Explicitly scan alternate pathways dynamically
+    const escapeRouteLeftVerified  = !leftLoom;
+    const escapeRouteRightVerified = !rightLoom;
+    
+    const focalThreats = filteredDetections.filter(p => processTargetLane(p.bbox[0] + p.bbox[2]/2, widthBoundary) === 'CENTER').map(p => p.class);
+    const targetLabel = focalThreats[0] || 'obstacle';
+
+    if (!escapeRouteLeftVerified && !escapeRouteRightVerified) {
+      pathText.textContent = 'CRITICAL ALERT — NO STABLE ROUTE DETECTED — PAUSE FORWARD MOMENTUM';
+      pathText.style.color = 'var(--crimson)';
+      pathIndicator.style.background = 'var(--crimson)';
+      pathIndicator.style.boxShadow  = 'var(--crimson-glow)';
+      
+      // IMMEDIATE_FORCE bypasses speech queue lag instantly
+      dispatchAcousticCue(`Stop. Path blocked ahead. No clear escape route available. Pause your step now.`, true);
+    } else {
+      // Prioritize routing vectors based on active lane clearance verifications
+      let targetEscapeVector = '';
+      if (escapeRouteLeftVerified && escapeRouteRightVerified) {
+        // Both lanes clear, pick left default
+        targetEscapeVector = 'left';
+      } else {
+        targetEscapeVector = escapeRouteLeftVerified ? 'left' : 'right';
+      }
+
+      pathText.textContent = `ALERT: ${targetLabel.toUpperCase()} CLOSING — STEER TOWARDS CLEAR ${targetEscapeVector.toUpperCase()} CHANNEL`;
+      pathText.style.color = 'var(--amber)';
+      pathIndicator.style.background = 'var(--amber)';
+      pathIndicator.style.boxShadow  = 'var(--amber-glow)';
+      
+      // Clear concise physical steering commands with verified routing checks
+      dispatchAcousticCue(`${targetLabel} ahead. Clear route verified on your ${targetEscapeVector}. Step ${targetEscapeVector} now.`, true);
+    }
+  } else {
+    clearCenterFrames++;
+    if (clearCenterFrames > 0 && clearCenterFrames % 30 === 0) commitLedgerValidation();
+
+    if (!leftLoom && !rightLoom) {
+      pathText.textContent = 'SYSTEM PATH SECURE — RUNNING NOMINAL TRACKING LOOPS';
+      pathText.style.color = 'var(--emerald)';
+      pathIndicator.style.background = 'var(--brand-blue)';
+      pathIndicator.style.boxShadow  = 'var(--brand-glow)';
+      
+      if (Date.now() - lastSpeechTime > 8000) {
+        dispatchAcousticCue('The path remains completely clear. Proceed straight forward safely.');
+      }
+    } else if (leftLoom) {
+      pathText.textContent = 'LEFT CHANNEL OCCUPIED — MAINTAIN ALIGNMENT TO RIGHT';
+      pathText.style.color = 'var(--amber)';
+      if (Date.now() - lastSpeechTime > 5000) {
+        dispatchAcousticCue('Object detected on your left. Maintain alignment slightly to the right.');
+      }
+    } else {
+      pathText.textContent = 'RIGHT CHANNEL OCCUPIED — MAINTAIN ALIGNMENT TO LEFT';
+      pathText.style.color = 'var(--amber)';
+      if (Date.now() - lastSpeechTime > 5000) {
+        dispatchAcousticCue('Object detected on your right. Maintain alignment slightly to the left.');
+      }
+    }
+  }
+}
+
+function processFrameMetas() {
+  const currentInstant = performance.now();
+  fpsBuffer.push(1000 / (currentInstant - lastFrameTime));
+  lastFrameTime = currentInstant;
+  if (fpsBuffer.length > 20) fpsBuffer.shift();
+  valFps.textContent = (fpsBuffer.reduce((a,b)=>a+b,0) / fpsBuffer.length).toFixed(1);
+}
+
+async function executionPipelineLoop() {
+  if (!detectionRunning) return;
+  processFrameMetas();
+  frameIdx++;
+  valFrames.textContent = frameIdx;
+  if (video.readyState >= 2) {
+    try { interpretSpatialArray(await model.detect(video)); } catch(err) {}
+  }
+  rafHandle = requestAnimationFrame(executionPipelineLoop);
+}
+
+// ── Application Mounting Stacks ──────────────────────
+async function initializeSystemMatrix() {
+  sysStatusVal.innerHTML = `<div class="status-dot"></div><span>SYNC BUFFERS</span>`;
+  try {
+    writeConsoleLog('Opening active hardware optical lens arrays...', '', 0, false, true);
+    await activateVideoArray();
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    writeConsoleLog('Camera linked. Compiling COCO-SSD dictionary layers...', '', 0, false, true);
+
+    model = await cocoSsd.load({ base: 'mobilenet_v2' });
+    writeConsoleLog('Computational vision model initialized. Pipelines armed.', '', 0, false, true);
+
+    loader.style.opacity = '0'; loader.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => loader.style.display = 'none', 300);
+    
+    sysDot.classList.add('active');
+    document.querySelector('#sys-status-indicator span').textContent = 'SYSTEM ACTIVE';
+
+    detectionRunning = true;
+    executionPipelineLoop();
+  } catch(error) {
+    loader.innerHTML = `<div style="color:var(--crimson); font-size:0.85rem; font-weight:700; text-align:center; padding:20px;">
+      CRITICAL HARDWARE INITIALIZATION EXCEPTION<br><small style="color:var(--text-secondary); font-family:var(--font-mono); font-size:0.68rem; display:block; margin-top:8px;">${error.message}</small></div>`;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    detectionRunning = false;
+    if (rafHandle) cancelAnimationFrame(rafHandle);
+    speechSynthesis.cancel();
+  } else if (model) {
+    detectionRunning = true;
+    executionPipelineLoop();
+  }
+});
+
+window.addEventListener('load', initializeSystemMatrix);
+</script>
+</body>
+</html>
